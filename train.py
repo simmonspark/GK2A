@@ -13,17 +13,28 @@ from models.Unet import UNet
 import os
 from torch import cuda
 import torch, gc
+import wandb
+
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
 ########################################
 MODEL_NAME = 'unet' # resnet unet 나머지는 추가 예정
 DEVICE = 'cuda'
-LR = 1e-5
+LR = 1e-4
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
 EPOCH = 200
 MODE = 'train' # train, test, hell(hard train)
 LOAD = True
 RESOLUTION = 224
+BATCH_SIZE = 16 # 8: vram6g 16: vram
+
+wandb.init(project="날씨!", name="experiment_name", config={
+    "learning_rate": LR,
+    "batch_size": BATCH_SIZE,
+    "epochs": EPOCH,
+})
+
+
 
 if(MODEL_NAME) == 'resnet' :
     model = models.resnet152(pretrained=True)
@@ -55,9 +66,9 @@ train_ds = Dataset(train_ir,train_rr)
 sample_ds = Dataset(sample_ir,sample_rr)
 test_ds = Dataset(test_ir,test_rr)
 
-train_loader = DataLoader(train_ds,batch_size=8)
-test_loader = DataLoader(test_ds,batch_size=8)
-sample_loader = DataLoader(sample_ds,batch_size=8)
+train_loader = DataLoader(train_ds,batch_size=BATCH_SIZE)
+test_loader = DataLoader(test_ds,batch_size=BATCH_SIZE)
+sample_loader = DataLoader(sample_ds,batch_size=BATCH_SIZE)
 
 
 if LOAD is True :
@@ -78,7 +89,9 @@ def train_step(dataloader):
         optim.step()
         loop.set_postfix(loss=loss.item())
         loss_list.append(loss)
+
     #scheduler.step()
+    wandb.log({"one epoch average loss": sum(loss_list)/len(loss_list)})
     return sum(loss_list)/len(loss_list)
 def validation(dataloader):
     loop = tqdm(dataloader, leave=True)
