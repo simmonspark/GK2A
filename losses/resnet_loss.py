@@ -7,8 +7,8 @@ class RES_LOSS(Module):
     def __init__(self):
         super(RES_LOSS,self).__init__()
         self.mse = nn.MSELoss(reduction='sum')
-        self.expt_cor = 5.0
-        self.background_cor = 1.0
+        self.expt_cor = 1.0
+        self.background_cor = 0.5
 
     def forward(self,pred,target):
 
