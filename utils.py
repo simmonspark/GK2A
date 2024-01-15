@@ -2,7 +2,7 @@ import numpy as np
 import netCDF4 as nc
 import os
 from sklearn.model_selection import train_test_split
-
+#안녕하세용
 def get_nc_list(DIR='/media/sien/DATA/DATA/dataset/GK2A'):
     IR = os.path.join(DIR,'IR/')
     RR = os.path.join(DIR,'RR/')
