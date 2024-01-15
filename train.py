@@ -20,7 +20,7 @@ import wandb
 ########################################
 MODEL_NAME = 'unet' # resnet unet 나머지는 추가 예정
 DEVICE = 'cuda'
-LR = 1e-4
+LR = 1e-3
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
 EPOCH = 200
 MODE = 'train' # train, test, hell(hard train)
