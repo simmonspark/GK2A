@@ -5,7 +5,21 @@ import netCDF4 as nc
 from sklearn.model_selection import train_test_split
 
 
-# 안녕하세용
+def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_hours=1):
+    from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
+    to_date = dt.datetime.strptime(yyyymmdd_to, '%Y%m%d')
+    to_date += dt.timedelta(days=1)
+
+    delta = dt.timedelta(hours=interval_hours)
+
+    date_list = []
+    while from_date < to_date:
+        date_list.append(from_date.strftime('%Y%m%d%H%M'))
+        from_date += delta
+
+    return date_list
+
+
 def get_nc_list(DIR='/media/sien/DATA/DATA/dataset/GK2A'):
     IR = os.path.join(DIR, 'IR/')
     RR = os.path.join(DIR, 'RR/')
@@ -44,17 +58,3 @@ def mkdir_p(directory):
     mkdir_p(os.path.dirname(directory))
     os.mkdir(directory)
 
-
-def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_hours=1):
-    from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
-    to_date = dt.datetime.strptime(yyyymmdd_to, '%Y%m%d')
-    to_date += dt.timedelta(days=1)
-
-    delta = dt.timedelta(hours=interval_hours)
-
-    date_list = []
-    while from_date < to_date:
-        date_list.append(from_date.strftime('%Y%m%d%H%M'))
-        from_date += delta
-
-    return date_list
