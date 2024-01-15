@@ -19,9 +19,9 @@ import torch, gc
 MODEL_NAME = 'unet' # resnet unet 나머지는 추가 예정
 DEVICE = 'cuda'
 LR = 1e-5
-MODEL_SAVE_PATH = os.path.join('./model_weight_store/',MODEL_NAME+'.pt')
+MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
 EPOCH = 200
-MODE = 'test' # train, test, hell(hard train)
+MODE = 'train' # train, test, hell(hard train)
 LOAD = True
 RESOLUTION = 224
 
@@ -51,10 +51,15 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optim,
 
 
 train_ir, train_rr, sample_ir, sample_rr, test_ir, test_rr = get_nc_list('/media/sien/DATA/DATA/dataset/GK2A')
-train_ds = Dataset(sample_ir,sample_rr)
+train_ds = Dataset(train_ir,train_rr)
+sample_ds = Dataset(sample_ir,sample_rr)
 test_ds = Dataset(test_ir,test_rr)
-test_loader = DataLoader(test_ds,batch_size=8)
+
 train_loader = DataLoader(train_ds,batch_size=8)
+test_loader = DataLoader(test_ds,batch_size=8)
+sample_loader = DataLoader(sample_ds,batch_size=8)
+
+
 if LOAD is True :
     check_point = torch.load(MODEL_SAVE_PATH)
     model.load_state_dict(check_point)

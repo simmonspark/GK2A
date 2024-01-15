@@ -1,0 +1,22 @@
+/media/sien/DATA --CODE
+                   --project file
+                 --DATA
+                   -- dataset
+                     --GK2A
+                       --IR
+                         --yyNNdd + time.nc
+                       --RR
+                         --yyNNdd + time.nc
+                 --weight--unet.pt
+                   --resnet.pt
+
+HOW TO USE, in train.py
+##########################################################
+## 모든 학습은 KeyboardInterrupt exeption후 자동 weight 저장 ##
+###########################################################
+
+
+param
+MODEL_NAME = 'unet' -> 모델 이름 unet, resnet
+LOAD = True -> 학습된 모델 올릴건지 True, False
+MODE = train : EPOCH 설정 후 학습 , test, hell(일정 loss 이하로 떨어질 때 까지 무한 학습, EPOCH 없음)
