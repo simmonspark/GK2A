@@ -14,7 +14,7 @@ class RES_LOSS(Module):
 
         #pred, target is 4d tensor : batched
 
-        #pred = torch.reshape(pred,(-1,224,224))
+        pred = torch.reshape(pred,(-1,224,224))
         target = torch.reshape(target,(-1,224,224))
         mask_expt = torch.sign(target)
         mask_background = 1-mask_expt
