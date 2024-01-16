@@ -7,7 +7,7 @@ from dataset import Dataset
 from losses.resnet_loss import RES_LOSS
 from losses.unet_loss import UNET_LOSS
 from losses.vit_loss import vit_loss
-from models.vit_patch28 import ViT
+from models.vit_patch28 import VIT
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -57,7 +57,7 @@ if(MODEL_NAME) == 'unet' :
     loss_fn = UNET_LOSS()
 
 if(MODEL_NAME) == 'vit' :
-    model = ViT()
+    model = VIT()
     model = model.to(DEVICE)
     loss_fn = vit_loss()
 

@@ -1,156 +1,114 @@
 import torch
-from torch import nn
-from torch import Tensor
-from einops import rearrange, reduce, repeat
-from einops.layers.torch import Rearrange, Reduce
+import torch.nn as nn
+from einops.layers.torch import Rearrange
+from einops import rearrange,repeat
 import torch.nn.functional as F
+#predifine param
+PATCH_SIZE  = 32
+IMG_SIZE = 224
+IMG_CHANNEL = 1
+TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
+ATTENTION_HEAD_NUM = 8
+EMBEDDING_DEPTH = 1024
+BATCH_SIZE = 8
 
-PATCH_SIZE = 28 # image is 224,224-> after patch size is  (64,28,28)
-
-BATCH_SIZE = 16
-IMAGE_SIZE = 224
-NUM_PATCH = 64 * BATCH_SIZE
-projection_dim = 768
-num_head = 4
-multi_layer_perceptron = [
-    projection_dim*2,
-    projection_dim
-]
-transformer_layers = 12
-mlp_head_units = [
-    2048,
-    4096,
-    50176
-]
-keys= nn.Linear(projection_dim,projection_dim)
-queries = nn.Linear(projection_dim,projection_dim)
-values =nn.Linear(projection_dim,projection_dim)
-
-class ViT(nn.Sequential):
-    def __init__(self,
-                in_channels: int=1,
-                patch_size : int=PATCH_SIZE,
-                emb_size :int=projection_dim,
-                depth: int=12,
-                n_classes:int =10,
-                **kwargs):
-        super().__init__(
-            PatchEmbedding(in_channels, patch_size, projection_dim),
-        TransformerEncoder(depth, emb_size=projection_dim, **kwargs),
-        ClassificationHead(emb_size=emb_size))
-class ClassificationHead(nn.Sequential):
-    def __init__(self, emb_size:int =projection_dim):
-        super().__init__(
-            Reduce('b n e -> b e', reduction ='mean'),
-            nn.LayerNorm(projection_dim),
-            nn.Linear(projection_dim, 1024),
-            nn.Linear(1024,2048),
-            nn.Linear(2048,50176)
-
+class Patch_Embadding(nn.Module):
+    def __init__(self):
+        super(Patch_Embadding,self).__init__()
+        self.patch_size = PATCH_SIZE
+        self.projection_channel = EMBEDDING_DEPTH
+        self.img_size = IMG_SIZE
+        self.img_channel = IMG_CHANNEL
+        self.projection = nn.Sequential(
+            nn.Conv2d(in_channels=1,out_channels=self.projection_channel,kernel_size=self.patch_size,stride=self.patch_size),
+            Rearrange('b e w h -> b (w h) e')
         )
-class TransformerEncoder(nn.Sequential):
-    def __init__(self, depth:int =12, **kwargs):
-        super().__init__(*[TransformerEncoderBlock(**kwargs) for _ in range(depth)])
-class MultiHeadAttention(nn.Module):
-    def __init__(self, emb_size: int = projection_dim, num_heads: int = 8, dropout: float = 0):
-        super().__init__()
-        self.emb_size = emb_size
-        self.num_heads = num_heads
-        # Fuse the queries, keys, values in one matrix
-        self.qkv = nn.Linear(emb_size, emb_size * 3)
-        self.att_drop = nn.Dropout(dropout)
-        self.projection = nn.Linear(emb_size, emb_size)
+        self.cls_token = nn.Parameter(torch.randn(1,1,self.projection_channel))
+        self.position_token = nn.Parameter(torch.randn((self.img_size//self.patch_size)**2 +1,self.projection_channel))
 
-    def forward(self, x: Tensor, mask: Tensor = None) -> Tensor:
-        # split keys, queries, and vlaues in num_heads
-        qkv = rearrange(self.qkv(x), "b n (h d qkv) -> (qkv) b h n d", h=self.num_heads, qkv=3)
-        queries, keys, values = qkv[0], qkv[1], qkv[2]
+    def forward(self,tensor):
+        tensor = self.projection(tensor)
+        cls_token = repeat(self.cls_token,'() n e -> b n e',b=BATCH_SIZE)
+        tensor = torch.cat([tensor,cls_token],dim=1)
+        tensor += self.position_token
+        return tensor
 
-        # sum up over the last axis
-        energy = torch.einsum('bhqd, bhkd -> bhqk', queries, keys)  # batch, num_heads, query_len, key_len
-        if mask is not None:
-            fill_value = torch.finfo(torch.float32).min
-            energy.mask_fill(~mask, fill_value)
+class Multi_Head_Attention(nn.Module):
+    def __init__(self):
+        super(Multi_Head_Attention,self).__init__()
+        self.q = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
+        self.k = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
+        self.v = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
+        self.att_drop = nn.Dropout(0.5)
+        self.projection = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
 
-        scaling = self.emb_size ** (1 / 2)
-        att = F.softmax(energy, dim=-1) / scaling
+
+    def forward(self,tensor):
+        q = rearrange(self.q(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
+        k = rearrange(self.k(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
+        v = rearrange(self.v(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
+        energy = torch.einsum('b h q d , b n k d -> b h q k',q,k)
+        att = F.softmax(energy,dim=-1)/EMBEDDING_DEPTH**(1/2)
         att = self.att_drop(att)
-
-        # sum up over the third axis
-        out = torch.einsum('bhal, bhlv -> bhav', att, values)
+        out = torch.einsum('b h a l, b h l v -> b h a v', att, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
         out = self.projection(out)
+        out +=tensor
         return out
-class ResidualAdd(nn.Module):
-    def __init__(self,fn):
-        super().__init__()
-        self.fn = fn
-    def forward(self, x, **kwargs):
-        res = x
-        x = self.fn(x, **kwargs)
-        x+= res
-        return x
-class FeedForwardBlock(nn.Sequential):
-    def __init__(self,emb_size:int, expansion : int=4, drop_p :float = 0.):
-        super().__init__(
-            nn.Linear(projection_dim, expansion* projection_dim),
+
+
+class MLP(nn.Module):
+    def __init__(self):
+        super(MLP, self).__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(in_features=EMBEDDING_DEPTH, out_features=EMBEDDING_DEPTH * 2),
             nn.GELU(),
-            nn.Dropout(drop_p),
-            nn.Linear(expansion*projection_dim, projection_dim))
-
-
-class TransformerEncoderBlock(nn.Sequential):
-    def __init__(self,
-                 emb_size: int = projection_dim,
-                 drop_p: float = 0,
-                 forward_expansion: int = 4,
-                 forward_drop_p: float = 0.,
-                 **kwargs):
-        super().__init__(
-            ResidualAdd(nn.Sequential(
-                nn.LayerNorm(emb_size),
-                MultiHeadAttention(emb_size, **kwargs),
-                nn.Dropout(drop_p)
-            )),
-            ResidualAdd(nn.Sequential(
-                nn.LayerNorm(emb_size),
-                FeedForwardBlock(
-                    emb_size, expansion=forward_expansion,
-                    drop_p=forward_drop_p),
-            )
-            ))
-
-
-class PatchEmbedding(nn.Module):
-    def __init__(self, in_channels: int = 1, patch_size: int = PATCH_SIZE, emb_size: int = projection_dim, img_size: int = 224):
-        self.patch_size = patch_size
-        super().__init__()
-        self.projection = nn.Sequential(
-            # using a conv layer instead of a linear one -> performance gains
-            nn.Conv2d(in_channels, emb_size, kernel_size=patch_size, stride=patch_size),
-            Rearrange('b e (h) (w) -> b (h w) e'),
+            nn.Dropout(0.5),
+            nn.Linear(in_features=EMBEDDING_DEPTH * 2, out_features=EMBEDDING_DEPTH)
         )
-        self.cls_token = nn.Parameter(torch.randn(1, 1, emb_size))
-        self.positions = nn.Parameter(torch.randn((img_size // patch_size) ** 2 + 1, emb_size))
-
-    def forward(self, x: Tensor) -> Tensor:
-        b, _, _, _ = x.shape
-        x = self.projection(x)
-        cls_tokens = repeat(self.cls_token, '() n e -> b n e', b=b)
-        # prepend the cls token to the input
-        x = torch.cat([cls_tokens, x], dim=1)
-        # add position embedding
-        x += self.positions
-
+    def forward(self,tensor):
+        x = self.mlp(tensor)
+        x +=tensor
         return x
-if __name__ == "__main__":
-    p = PatchEmbedding(in_channels=1, patch_size= PATCH_SIZE, emb_size = projection_dim, img_size = 224)
-    dummy = p(torch.randn(size=(8,1,224,224)))
-    x = torch.randn(8, 1, 224, 224)
-    patches_embedded = PatchEmbedding()(x)
-    x=TransformerEncoderBlock()(patches_embedded).shape
-    x = torch.randn(8, 1, 224, 224)
-    model = ViT()
-    x = model(x)
-    print()
 
+class ENCODER_BLOCK(nn.Module):
+    def __init__(self):
+        super(ENCODER_BLOCK, self).__init__()
+        self.mha = Multi_Head_Attention()
+        self.mlp = MLP()
+    def forward(self,tensor):
+        tensor = self.mha(tensor)
+        tensor = self.mlp(tensor)
+        return tensor
+class MLP_HEAD(nn.Module):
+    def __init__(self):
+        super(MLP_HEAD,self).__init__()
+        self.norm = nn.LayerNorm(TOKEN_NUM*EMBEDDING_DEPTH)
+        self.linear = nn.Linear(TOKEN_NUM*EMBEDDING_DEPTH,224*224)
+    def forward(self,tensor):
+        tensor = rearrange(tensor, 'b n d -> b (n d)')
+        tensor = self.norm(tensor)
+        tensor = self.linear(tensor)
+        return tensor
+class VIT(nn.Module):
+    def __init__(self,encoder_block_num = 8):
+        super(VIT,self).__init__()
+        self.block_num = encoder_block_num
+        self.patch_embedding = Patch_Embadding()
+        self.encoder_block = ENCODER_BLOCK()
+        self.mlp_head = MLP_HEAD()
+
+    def forward(self,tensor):
+        tensor = self.patch_embedding(tensor)
+        for i in range(self.block_num):
+            tensor = self.encoder_block(tensor)
+        tensor = self.mlp_head(tensor)
+        return tensor
+
+
+
+if __name__ == "__main__":
+    dummy = torch.randn((8,1,224,224))
+    mdoel = VIT()
+    dummy = mdoel(dummy)
+    print('for debug')
