@@ -20,18 +20,28 @@ import wandb
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
 ########################################
-MODEL_NAME = 'vit' # resnet unet 나머지는 추가 예정
+MODEL_NAME = 'unet' # resnet unet 나머지는 추가 예정
 DEVICE = 'cuda'
-LR = 1e-5
+LR = 1e-4
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
 EPOCH = 200
 MODE = 'train' # train, test, hell(hard train)
 LOAD = False
 RESOLUTION = 224
-BATCH_SIZE = 4 #using vit : using 16 # resnet : batch 4 # unet : batch 8  --> vram 6~7 정도 사용합니다.
+#resnet batch4 -> 8g
+#unet batch 8 -> 7g, batch 64 -> 22g
+#vit : batch 4 -> 30g...
+BATCH_SIZE = 64
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
+
+gc.collect()
+torch.cuda.empty_cache()
+cuda.memory_allocated('cuda')
+cuda.max_memory_allocated('cuda')
+cuda.memory_reserved('cuda')
+cuda.max_memory_reserved('cuda')
 
 wandb.init(project="날씨!", name="experiment_name", config={
     "learning_rate": LR,

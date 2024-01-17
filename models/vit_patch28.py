@@ -8,8 +8,8 @@ PATCH_SIZE  = 32
 IMG_SIZE = 224
 IMG_CHANNEL = 1
 TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
-ATTENTION_HEAD_NUM = 8
-EMBEDDING_DEPTH = 1024
+ATTENTION_HEAD_NUM = 4
+EMBEDDING_DEPTH = 528
 BATCH_SIZE = 8
 
 class Patch_Embadding(nn.Module):
@@ -108,7 +108,7 @@ class VIT(nn.Module):
 
 
 if __name__ == "__main__":
-    dummy = torch.randn((8,1,224,224))
+    dummy = torch.randn((1,1,224,224))
     mdoel = VIT()
     dummy = mdoel(dummy)
     print('for debug')
