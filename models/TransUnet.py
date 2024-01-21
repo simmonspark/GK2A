@@ -5,7 +5,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+#
 PATCH_SIZE  = 1
 IMG_SIZE = 14
 IMG_CHANNEL = 1024
