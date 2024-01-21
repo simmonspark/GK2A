@@ -5,14 +5,17 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#
+from torch.utils.checkpoint import checkpoint
+device = torch.device('cuda:0')
+torch.cuda.set_device(device)
+
 PATCH_SIZE  = 1
 IMG_SIZE = 14
 IMG_CHANNEL = 1024
 TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
-ATTENTION_HEAD_NUM = 8
+ATTENTION_HEAD_NUM = 4
 EMBEDDING_DEPTH = 256
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 def np2th(weights, conv=False):
     """Possibly convert HWIO to OIHW."""
     if conv:
@@ -243,7 +246,7 @@ class MLP_HEAD(nn.Module):
         tensor = self.linear(tensor)
         return tensor
 class VIT(nn.Module):
-    def __init__(self,encoder_block_num = 12):
+    def __init__(self,encoder_block_num = 8):
         super(VIT,self).__init__()
         self.block_num = encoder_block_num
         self.patch_embedding = Patch_Embadding()
@@ -256,53 +259,80 @@ class VIT(nn.Module):
             tensor = self.encoder_block(tensor)
         tensor = self.mlp_head(tensor)
         return tensor
-class transunet(nn.Module):
+class TransUnet(nn.Module):
     def __init__(self):
-        super(transunet,self).__init__()
+        super(TransUnet,self).__init__()
         self.vit = VIT()
-        self.resnet = ResNetV2(block_units=(3,4,9), width_factor=1)
+        self.resnet = ResNetV2(block_units=(3,4,6), width_factor=1)
+
+
+        self.block1 = nn.Sequential(
+            nn.Conv2d(in_channels=197,out_channels=512,kernel_size=(3,3),stride=1,padding='same'),
+            nn.BatchNorm2d(num_features=512),
+            nn.ReLU()
+        )
+        self.block2_1 = nn.ConvTranspose2d(in_channels=512, out_channels=512, kernel_size=2, stride=2, bias=True)
+
+        self.block2_2 = nn.Conv2d(in_channels=1024, out_channels=256, kernel_size=3, stride=1, padding=1)
+        self.block2_3 = nn.BatchNorm2d(num_features=256)
+        self.block2_4 = nn.ReLU(inplace=True)
+
+        self.block3_1 = nn.ConvTranspose2d(in_channels=256, out_channels=256, kernel_size=2, stride=2, bias=True)
+
+        self.block3_2 = nn.Conv2d(in_channels=512, out_channels=128, kernel_size=3, stride=1, padding=1)
+        self.block3_3 = nn.BatchNorm2d(num_features=128)
+        self.block3_4 = nn.ReLU(inplace=True)
+
+        self.block4_1 = nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=2, stride=2, bias=True)
+
+        self.block4_2 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.block4_3 = nn.BatchNorm2d(num_features=64)
+        self.block4_4 = nn.ReLU(inplace=True)
+
+        self.block5_1 = nn.ConvTranspose2d(in_channels=64, out_channels=16, kernel_size=2, stride=2, bias=True)
+        self.block5_2 = nn.Conv2d(in_channels=16, out_channels=1, kernel_size=3, stride=1, padding='same')
+        self.block5_3 = nn.BatchNorm2d(num_features=1)
+        self.block5_4 = nn.ReLU(inplace=True)
+
+
     def forward(self,tensor):
         proj,skip = self.resnet(tensor)
-        before_upconv = self.vit(proj)
+
+        def vit_checkpoint(proj):
+            return self.vit(proj)
+
+        before_upconv = checkpoint(vit_checkpoint, proj)
         before_upconv = torch.reshape(before_upconv,(BATCH_SIZE,TOKEN_NUM,14,14))
-        tensor = nn.Conv2d(in_channels=197,out_channels=512,kernel_size=(3,3),stride=1,padding='same')(before_upconv)
-        tensor = nn.BatchNorm2d(num_features=512)(tensor)
-        tensor = nn.ReLU()(tensor)
+        tensor = self.block1(before_upconv)
 
-        tensor = nn.ConvTranspose2d(in_channels=512, out_channels=512,kernel_size=2, stride=2, bias=True)(tensor)
-        tensor = torch.concat([tensor,skip[0]],dim=1)
-        tensor = nn.Conv2d(in_channels=1024,out_channels=256,kernel_size=3,stride=1,padding=1)(tensor)
-        tensor = nn.BatchNorm2d(num_features=256)(tensor)
-        tensor = nn.ReLU()(tensor)
+        tensor = self.block2_1(tensor)
+        tensor = torch.concat([tensor, skip[0]], dim=1)
+        tensor = self.block2_2(tensor)
+        tensor = self.block2_3(tensor)
+        tensor = self.block2_4(tensor)
 
-        tensor = nn.ConvTranspose2d(in_channels=256,out_channels=256,kernel_size=2,stride=2,bias=True)(tensor)
+        tensor = self.block3_1(tensor)
         tensor = torch.concat([tensor, skip[1]], dim=1)
-        tensor = nn.Conv2d(in_channels=512, out_channels=128, kernel_size=3, stride=1, padding=1)(tensor)
-        tensor = nn.BatchNorm2d(num_features=128)(tensor)
-        tensor = nn.ReLU()(tensor)
+        tensor =self.block3_2(tensor)
+        tensor =self.block3_3(tensor)
+        tensor =self.block3_4(tensor)
 
-        tensor = nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=2, stride=2, bias=True)(tensor)
+        tensor = self.block4_1(tensor)
         tensor = torch.concat([tensor, skip[2]], dim=1)
-        tensor = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1)(tensor)
-        tensor = nn.BatchNorm2d(num_features=64)(tensor)
-        tensor = nn.ReLU()(tensor)
+        tensor = self.block4_2(tensor)
+        tensor = self.block4_3(tensor)
+        tensor = self.block4_4(tensor)
 
-        tensor = nn.ConvTranspose2d(in_channels=64, out_channels=16, kernel_size=2, stride=2, bias=True)(tensor)
+        tensor = self.block5_1(tensor)
+        tensor = self.block5_2(tensor)
+        tensor = self.block5_3(tensor)
+        tensor = self.block5_4(tensor)
 
-        tensor = nn.Conv2d(in_channels=16, out_channels=1, kernel_size=3, stride=1, padding='same')(tensor)
-        tensor = nn.BatchNorm2d(num_features=1)(tensor)
-        tensor = nn.ReLU()(tensor)
 
         return tensor
 
-
-
-
-        print()
 if __name__ == "__main__":
-    #model = ResNetV2(block_units=(3,4,9), width_factor=1)
-    dummy = torch.randn(size=(2,1,224,224))
-    model = transunet()
+    dummy = torch.randn(size=(BATCH_SIZE,1,224,224)).to('cuda')
+    model = TransUnet().to('cuda')
     pred = model(dummy)
-    print(
-)
+    print()
