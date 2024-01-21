@@ -113,3 +113,10 @@ class UNet(nn.Module):
         x = self.fc(dec1_1)
 
         return x
+if __name__ == "__main__":
+    #model = ResNetV2(block_units=(3,4,9), width_factor=1)
+    dummy = torch.randn(size=(2,1,224,224))
+    model = UNet()
+    pred = model(dummy)
+    print(
+)

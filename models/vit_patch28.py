@@ -10,7 +10,7 @@ IMG_CHANNEL = 1
 TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
 ATTENTION_HEAD_NUM = 4
 EMBEDDING_DEPTH = 528
-BATCH_SIZE = 8
+BATCH_SIZE = 32
 
 class Patch_Embadding(nn.Module):
     def __init__(self):

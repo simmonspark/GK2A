@@ -31,7 +31,7 @@ RESOLUTION = 224
 #resnet batch4 -> 8g
 #unet batch 8 -> 7g, batch 64 -> 22g
 #vit : batch 4 -> 30g...
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
