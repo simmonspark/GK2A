@@ -13,5 +13,5 @@ https://www.kma.go.kr/kma/biz/forecast05.jsp
 질문 1.  모델의 출력이 달라져야 하는지... classification이면 batch_size, width, height, depth(class 갯수) 
 질문 2. 그럼 각 채널별로 softmax 해야함? 아니면 레이블 인코딩 해야하는지 
 질문 3. 아니면 모델의 강우량 출력에 그냥 마스크를 씌워서 각 각 구하는 방식으로 하는지... 
-
+#
 '''
