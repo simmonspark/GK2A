@@ -25,7 +25,7 @@ from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
 #
 
 
-MODEL_NAME = 'transunet' # resnet unet vit transunet 나머지는 추가 예정
+MODEL_NAME = 'vit' # resnet unet vit transunet 나머지는 추가 예정
 DEVICE = 'cuda'
 LR = 5e-5
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
@@ -36,7 +36,7 @@ RESOLUTION = 224
 #resnet batch4 -> 8g
 #unet batch 8 -> 7g, batch 64 -> 22g
 #vit : batch 4 -> 30g...
-BATCH_SIZE = 8
+BATCH_SIZE = 32
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
