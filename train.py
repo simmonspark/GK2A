@@ -29,7 +29,7 @@ MODEL_NAME = 'transunet' # resnet unet vit transunet 나머지는 추가 예정
 DEVICE = 'cuda'
 LR = 5e-5
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
-EPOCH = 30
+EPOCH = 200
 MODE = 'train' # train, test, no_epoch(hard train)
 LOAD = False
 RESOLUTION = 224
@@ -237,9 +237,6 @@ if __name__ == '__main__':
                 gc.collect()
                 torch.cuda.empty_cache()
                 cuda.memory_allocated('cuda')
-                print(cuda.max_memory_allocated('cuda'))
-                print(cuda.memory_reserved('cuda'))
-                print(cuda.max_memory_reserved('cuda'))
 
         if MODE == 'no_epoch':
             cnt = 0
