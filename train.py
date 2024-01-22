@@ -1,18 +1,14 @@
 import torchvision.models as models
-import torch
 import torch.nn as nn
 from utils import get_nc_list
 from torch.utils.data import DataLoader
 from dataset import Dataset
-from losses.resnet_loss import RES_LOSS
-from losses.unet_loss import UNET_LOSS
-from losses.vit_loss import vit_loss
+from loss_fn import loss_fn
 from models.vit_patch28 import VIT
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from models.Unet import UNet
-from models.TransUnet import TransUnet
 import os
 from torch import cuda
 import torch, gc
@@ -22,21 +18,25 @@ import argparse
 import torch.backends.cudnn as cudnn
 from networks.vit_seg_modeling import VisionTransformer as ViT_seg
 from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
+
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
 ########################################
+
+
+
 MODEL_NAME = 'transunet' # resnet unet vit transunet 나머지는 추가 예정
 DEVICE = 'cuda'
-LR = 1e-4
+LR = 5e-5
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
-EPOCH = 200
-MODE = 'train' # train, test, hell(hard train)
-LOAD = True
+EPOCH = 30
+MODE = 'train' # train, test, no_epoch(hard train)
+LOAD = False
 RESOLUTION = 224
 #resnet batch4 -> 8g
 #unet batch 8 -> 7g, batch 64 -> 22g
 #vit : batch 4 -> 30g...
-BATCH_SIZE = 64
+BATCH_SIZE = 8
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
@@ -64,8 +64,9 @@ if(MODEL_NAME) == 'resnet' :
         nn.Linear(in_features=4096, out_features=RESOLUTION * RESOLUTION)
     )
     model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-    loss_fn = RES_LOSS()
+    loss_fn = loss_fn()
     model = model.to(DEVICE)
+
 if(MODEL_NAME)== 'transunet' :
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_path', type=str,
@@ -149,18 +150,17 @@ if(MODEL_NAME)== 'transunet' :
         config_vit.patches.grid = (
         int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
     model = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
-
-    loss_fn = UNET_LOSS()
+    loss_fn = loss_fn()
 
 if(MODEL_NAME) == 'unet' :
     model = UNet()
     model = model.to(DEVICE)
-    loss_fn = UNET_LOSS()
+    loss_fn = loss_fn()
 
 if(MODEL_NAME) == 'vit' :
     model = VIT()
     model = model.to(DEVICE)
-    loss_fn = vit_loss()
+    loss_fn = loss_fn()
 
 optim = torch.optim.Adam(model.parameters(),LR)
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optim,
@@ -208,30 +208,40 @@ def validation(dataloader):
     for x, y in loop:
         x = x.to(DEVICE)
         y = y.to(DEVICE)
-        optim.zero_grad()
         pred = model(x)
         loss = loss_fn(pred, y)
         loop.set_postfix(loss=loss.item())
         loss_list.append(loss)
+    wandb.log({"validation_one_epoch_loss": sum(loss_list) / len(loss_list)})
     return sum(loss_list) / len(loss_list)
 if __name__ == '__main__':
     try:
         if MODE == 'train':
+            schedule_loss = []
             for i in range(EPOCH):
                 train_step(dataloader=train_loader)
-                torch.save(model.state_dict(), MODEL_SAVE_PATH)
                 print(f'EPOCH : {EPOCH} CURRENT : {i + 1}')
-                """if((i+1)%10 == 0):
-                    val_loss = validation(test_loader)
-                    print(f'validation_loss is : {val_loss}')"""
+                if((i+1)%5 == 0):
+                    with torch.no_grad():
+                        val_loss = validation(sample_loader)
+                        schedule_loss.append(val_loss)
+                        print(f'validation_loss is : {val_loss}')
+                if(len(schedule_loss)==2):
+                    preb_val_loss = schedule_loss.pop(0)
+                    current_val_loss = schedule_loss[0]
+                    if(current_val_loss>preb_val_loss):
+                        print(f"[stoped by scheduler]: preb_val = {preb_val_loss} current_val = {current_val_loss}, model saved and break ")
+                        torch.save(model.state_dict(), MODEL_SAVE_PATH)
+                        break
+
                 gc.collect()
                 torch.cuda.empty_cache()
                 cuda.memory_allocated('cuda')
-                cuda.max_memory_allocated('cuda')
-                cuda.memory_reserved('cuda')
-                cuda.max_memory_reserved('cuda')
+                print(cuda.max_memory_allocated('cuda'))
+                print(cuda.memory_reserved('cuda'))
+                print(cuda.max_memory_reserved('cuda'))
 
-        if MODE == 'hell':
+        if MODE == 'no_epoch':
             cnt = 0
             flag = 10000
             ep_cnt = 0
@@ -249,9 +259,9 @@ if __name__ == '__main__':
                     torch.save(model.state_dict(), MODEL_SAVE_PATH)
                     break
 
-                """if ((ep_cnt + 1) % 10 == 0):
+                if ((ep_cnt + 1) % 5 == 0):
                     val_loss = validation(test_loader)
-                    print(f'validation_loss is : {val_loss}')"""
+                    print(f'validation_loss is : {val_loss}')
     except KeyboardInterrupt:
         print("KeyboardInterrupt! model_saved! ")
         torch.save(model.state_dict(), MODEL_SAVE_PATH)

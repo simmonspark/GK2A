@@ -1,62 +1,34 @@
 import torch
 import torch.nn as nn
+from einops import rearrange, reduce, repeat
 from einops.layers.torch import Rearrange
-from einops import rearrange,repeat
-import torch.nn.functional as F
-#predifine param
-PATCH_SIZE  = 32
+torch.autograd.set_detect_anomaly(True)
+#predefine
+#predefined_param
+PATCH_SIZE = 32
+EMBEDDING_DEPTH = 400
 IMG_SIZE = 224
 IMG_CHANNEL = 1
-TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
-ATTENTION_HEAD_NUM = 4
-EMBEDDING_DEPTH = 528
 BATCH_SIZE = 32
-
-class Patch_Embadding(nn.Module):
+HEAD_NUM = 8
+TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
+ENCODER_NUM = 8
+class PatchEmbedding(nn.Module):
     def __init__(self):
-        super(Patch_Embadding,self).__init__()
-        self.patch_size = PATCH_SIZE
-        self.projection_channel = EMBEDDING_DEPTH
-        self.img_size = IMG_SIZE
-        self.img_channel = IMG_CHANNEL
+        super(PatchEmbedding,self).__init__()
         self.projection = nn.Sequential(
-            nn.Conv2d(in_channels=1,out_channels=self.projection_channel,kernel_size=self.patch_size,stride=self.patch_size),
-            Rearrange('b e w h -> b (w h) e')
+            nn.Conv2d(in_channels=IMG_CHANNEL, out_channels=EMBEDDING_DEPTH, kernel_size=PATCH_SIZE, stride=PATCH_SIZE),
+            Rearrange('b c w h -> b (w h) c')
         )
-        self.cls_token = nn.Parameter(torch.randn(1,1,self.projection_channel))
-        self.position_token = nn.Parameter(torch.randn((self.img_size//self.patch_size)**2 +1,self.projection_channel))
+        self.cls_token = nn.Parameter(torch.randn(size=(1,1,EMBEDDING_DEPTH)))
+        self.position_token = nn.Parameter(torch.rand(size=((IMG_SIZE//PATCH_SIZE)**2+1,EMBEDDING_DEPTH)))
 
     def forward(self,tensor):
         tensor = self.projection(tensor)
-        cls_token = repeat(self.cls_token,'() n e -> b n e',b=BATCH_SIZE)
+        cls_token = repeat(self.cls_token,'() l d -> b l d',b=tensor.shape[0])
         tensor = torch.cat([tensor,cls_token],dim=1)
         tensor += self.position_token
         return tensor
-
-class Multi_Head_Attention(nn.Module):
-    def __init__(self):
-        super(Multi_Head_Attention,self).__init__()
-        self.q = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
-        self.k = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
-        self.v = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
-        self.att_drop = nn.Dropout(0.5)
-        self.projection = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
-
-
-    def forward(self,tensor):
-        q = rearrange(self.q(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
-        k = rearrange(self.k(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
-        v = rearrange(self.v(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
-        energy = torch.einsum('b h q d , b n k d -> b h q k',q,k)
-        att = F.softmax(energy,dim=-1)/EMBEDDING_DEPTH**(1/2)
-        att = self.att_drop(att)
-        out = torch.einsum('b h a l, b h l v -> b h a v', att, v)
-        out = rearrange(out, 'b h n d -> b n (h d)')
-        out = self.projection(out)
-        out +=tensor
-        return out
-
-
 class MLP(nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
@@ -70,16 +42,6 @@ class MLP(nn.Module):
         x = self.mlp(tensor)
         x +=tensor
         return x
-
-class ENCODER_BLOCK(nn.Module):
-    def __init__(self):
-        super(ENCODER_BLOCK, self).__init__()
-        self.mha = Multi_Head_Attention()
-        self.mlp = MLP()
-    def forward(self,tensor):
-        tensor = self.mha(tensor)
-        tensor = self.mlp(tensor)
-        return tensor
 class MLP_HEAD(nn.Module):
     def __init__(self):
         super(MLP_HEAD,self).__init__()
@@ -90,25 +52,35 @@ class MLP_HEAD(nn.Module):
         tensor = self.norm(tensor)
         tensor = self.linear(tensor)
         return tensor
-class VIT(nn.Module):
-    def __init__(self,encoder_block_num = 8):
-        super(VIT,self).__init__()
-        self.block_num = encoder_block_num
-        self.patch_embedding = Patch_Embadding()
-        self.encoder_block = ENCODER_BLOCK()
-        self.mlp_head = MLP_HEAD()
-
+class Encoder(nn.Module):
+    def __init__(self):
+        super(Encoder, self).__init__()
+        self.MultiHeadAttention = nn.MultiheadAttention(embed_dim=EMBEDDING_DEPTH,num_heads=8,dropout=0.5)
+        self.layer = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
+        self.mlp = MLP()
     def forward(self,tensor):
-        tensor = self.patch_embedding(tensor)
-        for i in range(self.block_num):
-            tensor = self.encoder_block(tensor)
-        tensor = self.mlp_head(tensor)
+        tensor = self.layer(tensor)
+        qkv = tensor.clone()
+        attention_output, _ = self.MultiHeadAttention(qkv,qkv,qkv)
+        tensor +=attention_output
+        tensor = self.mlp(tensor)
         return tensor
+class VIT(nn.Module):
+    def __init__(self):
+        super(VIT,self).__init__()
+        self.emb = PatchEmbedding()
+        self.encoder = Encoder()
+        self.mlp_head = MLP_HEAD()
+    def forward(self,tensor):
+        tensor = self.emb(tensor)
+        for i in range(ENCODER_NUM):
+            tensor = self.encoder(tensor)
+        return rearrange(self.mlp_head(tensor),'b (c w h) -> b c w h',b=tensor.shape[0],w=IMG_SIZE,c=1)
 
 
 
 if __name__ == "__main__":
-    dummy = torch.randn((1,1,224,224))
-    mdoel = VIT()
-    dummy = mdoel(dummy)
+    dummy = torch.randn(size=(BATCH_SIZE,1,224,224))
+    model = VIT()
+    pred = model(dummy)
     print('for debug')

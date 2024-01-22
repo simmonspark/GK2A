@@ -3,9 +3,9 @@ from torch.nn import Module
 import torch.nn as nn
 import torch
 torch.autograd.set_detect_anomaly(True)
-class vit_loss(Module):
+class loss_fn(Module):
     def __init__(self):
-        super(vit_loss,self).__init__()
+        super(loss_fn,self).__init__()
         self.mse = nn.MSELoss(reduction='sum')
         self.expt_cor = 1.0
         self.background_cor = 0.5
@@ -13,9 +13,9 @@ class vit_loss(Module):
     def forward(self,pred,target):
 
         #pred, target is 4d tensor : batched
+        pred = torch.reshape(pred,(-1,1,224,224))
+        target = torch.reshape(target,(-1,1,224,224))
 
-        pred = torch.reshape(pred,(-1,224,224))
-        target = torch.reshape(target,(-1,224,224))
         mask_expt = torch.sign(target)
         mask_background = 1-mask_expt
 
