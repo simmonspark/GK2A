@@ -22,7 +22,7 @@ from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
 ########################################
-
+#
 
 
 MODEL_NAME = 'transunet' # resnet unet vit transunet 나머지는 추가 예정
