@@ -3,7 +3,7 @@ import torch.nn as nn
 from utils import get_nc_list
 from torch.utils.data import DataLoader
 from dataset import Dataset
-from loss_fn import loss_fn
+from loss_fn import loss_fn as reg_loss
 from models.vit_patch28 import VIT
 from tqdm import tqdm
 import numpy as np
@@ -18,6 +18,7 @@ import argparse
 import torch.backends.cudnn as cudnn
 from networks.vit_seg_modeling import VisionTransformer as ViT_seg
 from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
+from utils import create_classification_mask as ccm
 
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
@@ -30,9 +31,10 @@ DEVICE = 'cuda'
 LR = 5e-5
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
 EPOCH = 200
-MODE = 'train' # train, test, no_epoch(hard train)
-LOAD = False
+MODE = 'test' # train, test, no_epoch(hard train)
+LOAD = True
 RESOLUTION = 224
+LOSS_MODE = 'reg'# reg, class
 #resnet batch4 -> 8g
 #unet batch 8 -> 7g, batch 64 -> 22g
 #vit : batch 4 -> 30g...
@@ -54,6 +56,10 @@ wandb.init(project="날씨!", name=MODEL_NAME, config={
     "epochs": EPOCH,
 })
 
+if(LOSS_MODE == 'reg'):
+    loss_fn = reg_loss()
+if(LOSS_MODE == 'class'):
+    print('이 로스는 망했습니다. ㅜㅜ')
 
 
 if(MODEL_NAME) == 'resnet' :
@@ -64,7 +70,6 @@ if(MODEL_NAME) == 'resnet' :
         nn.Linear(in_features=4096, out_features=RESOLUTION * RESOLUTION)
     )
     model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-    loss_fn = loss_fn()
     model = model.to(DEVICE)
 
 if(MODEL_NAME)== 'transunet' :
@@ -150,17 +155,15 @@ if(MODEL_NAME)== 'transunet' :
         config_vit.patches.grid = (
         int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
     model = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
-    loss_fn = loss_fn()
 
 if(MODEL_NAME) == 'unet' :
     model = UNet()
     model = model.to(DEVICE)
-    loss_fn = loss_fn()
 
 if(MODEL_NAME) == 'vit' :
     model = VIT()
     model = model.to(DEVICE)
-    loss_fn = loss_fn()
+
 
 optim = torch.optim.Adam(model.parameters(),LR)
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optim,
@@ -271,13 +274,13 @@ if __name__ == '__main__':
             pred = model(x)
             x_single = x[0].cpu().detach().numpy().squeeze()
             pred_single = pred[0].cpu().detach().numpy().squeeze()
-
             x_single = np.abs(np.reshape(x_single, (224, 224))+0.1)
-            pred_single = np.abs(np.reshape(pred_single, (224, 224))-0.1)
+            pred_single = np.abs(np.reshape(pred_single*100.0, (224, 224)))
             rgb_image = np.stack([x_single, pred_single, pred_single], axis=-1)
             plt.figure(figsize=(6, 6))
             plt.imshow(rgb_image)
             plt.title('Rain fall prediction')
+            mask1,mask2,mask3,mask4 = ccm(pred_single)
             plt.show()
 
 

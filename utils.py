@@ -3,7 +3,7 @@ import datetime as dt
 import numpy as np
 import netCDF4 as nc
 from sklearn.model_selection import train_test_split
-
+import torch
 
 def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_hours=1):
     from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
@@ -43,7 +43,7 @@ def create_one_img_label(IR_PATH, RR_PATH):
     ir_img = ir_data.variables['image_pixel_values'][:]
     rr_img = rr_data.variables['RR'][:]
 
-    return (np.array(ir_img).reshape(900, 900, 1)) / 12000.0, (np.array(rr_img).reshape(900, 900, 1)) / 10.0
+    return (np.array(ir_img).reshape(900, 900, 1)) / 12000.0, (np.array(rr_img).reshape(900, 900, 1)) / 100.0
 
 
 def mkdir_p(directory):
@@ -57,4 +57,36 @@ def mkdir_p(directory):
         return
     mkdir_p(os.path.dirname(directory))
     os.mkdir(directory)
+'''
+https://www.kma.go.kr/kma/biz/forecast05.jsp
+
+약한 비 : 1이상  ~ 3미만  mm/h
+비 : 3이상 ~ 15미만  mm/h
+강한 : 15이상 ~ 30미만  mm/h
+매우 강한 비 : 30이상  mm/h
+
+비의 종류는 4개입니다. label = mask1(class1) mask2(class2) mask3(class3) mask4(class4)
+
+질문 1.  모델의 출력이 달라져야 하는지... classification이면 batch_size, width, height, depth(class 갯수) 
+질문 2. 그럼 각 채널별로 softmax 해야함? 아니면 레이블 인코딩 해야하는지 
+질문 3. 아니면 모델의 강우량 출력에 그냥 마스크를 씌워서 각 각 구하는 방식으로 하는지... 
+#
+'''
+
+def create_classification_mask(tensor):
+    '''
+    레이블 텐서 또는 모델의 출력을 받아 4개의 mask를 생성합니다.
+    노말라이즈 시킨 값은 잘못된 mask를 생성합니다 주의하세욤!
+    :param tensor:
+    :return: mask(tuple)|num-> 4
+    '''
+    if(len(tensor.shape)!=4):
+        tensor = tensor.reshape(-1,1,224,224)
+    tensor = tensor.to('cpu').detach()
+    mask1 = torch.where((tensor>=1) & (tensor<3),1,0)
+    mask2 = torch.where((tensor>=3) & (tensor<15),1,0)
+    mask3 = torch.where((tensor >= 15) & (tensor < 30),1,0)
+    mask4 = torch.where((tensor >= 30),1,0)
+    return np.array(mask1),np.array(mask2),np.array(mask3),np.array(mask4)
+
 
