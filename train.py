@@ -19,6 +19,7 @@ import torch.backends.cudnn as cudnn
 from networks.vit_seg_modeling import VisionTransformer as ViT_seg
 from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
 from utils import create_classification_mask as ccm
+from models.smaat_unet import SMAT_unet
 
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
@@ -26,13 +27,13 @@ from utils import create_classification_mask as ccm
 #
 
 
-MODEL_NAME = 'vit' # resnet unet vit transunet 나머지는 추가 예정
+MODEL_NAME = 'smat' # resnet unet vit transunet 나머지는 추가 예정
 DEVICE = 'cuda'
 LR = 5e-5
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
 EPOCH = 200
-MODE = 'test' # train, test, no_epoch(hard train)
-LOAD = True
+MODE = 'train' # train, test, no_epoch(hard train)
+LOAD = False
 RESOLUTION = 224
 LOSS_MODE = 'reg'# reg, class
 #resnet batch4 -> 8g
@@ -160,6 +161,10 @@ if(MODEL_NAME) == 'unet' :
     model = UNet()
     model = model.to(DEVICE)
 
+if(MODEL_NAME) == 'smat' :
+    model = SMAT_unet()
+    model = model.to(DEVICE)
+
 if(MODEL_NAME) == 'vit' :
     model = VIT()
     model = model.to(DEVICE)
@@ -177,9 +182,9 @@ train_ds = Dataset(train_ir,train_rr)
 sample_ds = Dataset(sample_ir,sample_rr)
 test_ds = Dataset(test_ir,test_rr)
 
-train_loader = DataLoader(train_ds,batch_size=BATCH_SIZE)
-test_loader = DataLoader(test_ds,batch_size=BATCH_SIZE)
-sample_loader = DataLoader(sample_ds,batch_size=BATCH_SIZE)
+train_loader = DataLoader(train_ds,batch_size=BATCH_SIZE,num_workers=15)
+test_loader = DataLoader(test_ds,batch_size=BATCH_SIZE,num_workers=15)
+sample_loader = DataLoader(sample_ds,batch_size=BATCH_SIZE,num_workers=15)
 
 
 if LOAD is True :

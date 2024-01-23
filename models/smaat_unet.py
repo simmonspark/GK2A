@@ -174,9 +174,9 @@ class UpDS(nn.Module):
         # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
-class ENCODER(nn.Module):
+class SMAT_unet(nn.Module):
     def __init__(self):
-        super(ENCODER,self).__init__()
+        super(SMAT_unet,self).__init__()
         self.dic_bam = [64,128,256,512,512]
         self.dic_conv = [1,32,64,96,128,176,256,384,512,512,512]
         self.for_skip = []
@@ -232,37 +232,6 @@ class ENCODER(nn.Module):
             ]
         ))
 
-
-
-
-    def forward(self,tensor):
-
-        tensor = self.E_1(tensor)
-        self.for_skip.append(self.cbam_1(tensor))
-        tensor = self.max_pool(tensor)
-
-        tensor = self.E_2(tensor)
-        self.for_skip.append(self.cbam_2(tensor))
-        tensor = self.max_pool(tensor)
-
-        tensor = self.E_3(tensor)
-        self.for_skip.append(self.cbam_3(tensor))
-        tensor = self.max_pool(tensor)
-
-        tensor = self.E_4(tensor)
-        self.for_skip.append(self.cbam_4(tensor))
-        tensor = self.max_pool(tensor)
-        tensor = self.E_5(tensor)
-        tensor = self.cbam_5(tensor)
-
-
-        return tensor, self.for_skip
-
-
-class unet(nn.Module):
-    def __init__(self):
-        super(unet,self).__init__()
-        self.encoder = ENCODER()
         factor = 2
         kernels_per_layer = 2
         self.bilinear = True
@@ -271,23 +240,43 @@ class unet(nn.Module):
         self.up3 = UpDS(256, 128 // factor, self.bilinear, kernels_per_layer=kernels_per_layer)
         self.up4 = UpDS(128, 64, self.bilinear, kernels_per_layer=kernels_per_layer)
 
-        self.out = depthwise_separable_conv(nin=64,nout=1,kernel_size=1)
+        self.out = depthwise_separable_conv(nin=64, nout=1, kernel_size=1)
 
     def forward(self,tensor):
-        tensor,features = self.encoder(tensor)
-        tensor = self.up1(tensor,features[3])
-        tensor = self.up2(tensor,features[2])
-        tensor = self.up3(tensor,features[1])
-        tensor = self.up4(tensor,features[0])
+
+        tensor = self.E_1(tensor)
+        skip1 = self.cbam_1(tensor)
+        tensor = self.max_pool(tensor)
+
+        tensor = self.E_2(tensor)
+        skip2 = self.cbam_2(tensor)
+        tensor = self.max_pool(tensor)
+
+        tensor = self.E_3(tensor)
+        skip3 = self.cbam_3(tensor)
+        tensor = self.max_pool(tensor)
+
+        tensor = self.E_4(tensor)
+        skip4 = self.cbam_4(tensor)
+        tensor = self.max_pool(tensor)
+        tensor = self.E_5(tensor)
+        tensor = self.cbam_5(tensor)
+
+        tensor = self.up1(tensor, skip4 )
+        tensor = self.up2(tensor, skip3)
+        tensor = self.up3(tensor, skip2)
+        tensor = self.up4(tensor, skip1)
         tensor = self.out(tensor)
+
 
         return tensor
 
 
 
+
 if __name__ == "__main__":
     dummy = torch.randn(size=(4,1,288,288))
-    model = unet()
+    model = SMAT_unet()
     pred = model(dummy)
     print()
 
