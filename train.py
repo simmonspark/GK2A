@@ -2,7 +2,7 @@ import torchvision.models as models
 import torch.nn as nn
 from utils import get_nc_list
 from torch.utils.data import DataLoader
-from dataset import Dataset
+from dataset import Single_Channel_Dataset
 from loss_fn import loss_fn as reg_loss
 from models.vit_patch28 import VIT
 from tqdm import tqdm
@@ -25,9 +25,14 @@ from models.smaat_unet import SMAT_unet
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
 ########################################
 #
+###
+save_root_path = '/media/sien/DATA/DATA/dataset'
+date_from = '20230626'  # yyyyMMdd
+date_to = '20230720'  # yyyyMMdd
+interval_minutes = 10  # minutes
+###
 
-
-MODEL_NAME = 'smat'  # resnet unet vit transunet 나머지는 추가 예정
+MODEL_NAME = 'unet'  # resnet unet vit transunet 나머지는 추가 예정
 DEVICE = 'cuda'
 LR = 5e-5
 MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/', MODEL_NAME + '.pt')
@@ -174,13 +179,11 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optim,
                                               last_epoch=-1,
                                               verbose=True)
 
-train_ir, train_rr, sample_ir, sample_rr, test_ir, test_rr = get_nc_list('/media/sien/DATA/DATA/dataset/GK2A')
-train_ds = Dataset(train_ir, train_rr)
-sample_ds = Dataset(sample_ir, sample_rr)
-test_ds = Dataset(test_ir, test_rr)
 
-train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, num_workers=15)
-test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, num_workers=15)
+
+sample_ds = Single_Channel_Dataset('/media/sien/DATA/DATA/dataset','20230701','20230703',interval=10,img_size=256)
+
+
 sample_loader = DataLoader(sample_ds, batch_size=BATCH_SIZE, num_workers=15)
 
 if LOAD is True:
@@ -229,7 +232,7 @@ if __name__ == '__main__':
             schedule_loss = []
             patient = 0
             for i in range(EPOCH):
-                train_step(dataloader=train_loader)
+                train_step(dataloader=sample_loader)
                 print(f'EPOCH : {EPOCH} CURRENT : {i + 1}')
                 if ((i + 1) % 5 == 0):
                     with torch.no_grad():
@@ -258,7 +261,7 @@ if __name__ == '__main__':
             ep_cnt = 0
             while True:
                 ep_cnt += 1
-                loss = train_step(dataloader=train_loader)
+                loss = train_step(dataloader=sample_loader)
                 if (loss < 100):
                     torch.save(model.state_dict(), MODEL_SAVE_PATH)
                     break
@@ -271,7 +274,7 @@ if __name__ == '__main__':
                     break
 
                 if ((ep_cnt + 1) % 5 == 0):
-                    val_loss = validation(test_loader)
+                    val_loss = validation(sample_loader)
                     print(f'validation_loss is : {val_loss}')
     except KeyboardInterrupt:
         print("KeyboardInterrupt! model_saved! ")
@@ -279,7 +282,7 @@ if __name__ == '__main__':
 
     if MODE == 'test':
 
-        for x, y in test_loader:
+        for x, y in sample_loader:
             x = x.to(DEVICE)
             model = model.eval()
             pred = model(x)

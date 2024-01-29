@@ -36,11 +36,11 @@ def download_data(save_root_path, date_from, date_to, interval_minutes, key):
 
 
 if __name__ == '__main__':
-    save_root_path = '/home/jh/data'
+    save_root_path = '/media/sien/DATA/DATA/dataset'
     date_from = '20230626'  # yyyyMMdd
     date_to = '20230720'  # yyyyMMdd
     interval_minutes = 10  # minutes
-    key = 'f3MNOQUmRWKzDTkFJpViXA'  # KMA API Hub Authorization Key
+    key = 'HHrdTz4JQhW63U8-CSIV9Q'  # KMA API Hub Authorization Key
 
     download_data(save_root_path, date_from, date_to, interval_minutes, key)
 
