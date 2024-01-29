@@ -5,12 +5,12 @@ import netCDF4 as nc
 from sklearn.model_selection import train_test_split
 import torch
 
-def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_hours=1):
+def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes=60):
     from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
     to_date = dt.datetime.strptime(yyyymmdd_to, '%Y%m%d')
     to_date += dt.timedelta(days=1)
 
-    delta = dt.timedelta(hours=interval_hours)
+    delta = dt.timedelta(minutes=interval_minutes)
 
     date_list = []
     while from_date < to_date:

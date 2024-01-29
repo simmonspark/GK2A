@@ -4,7 +4,7 @@ from tqdm import tqdm
 from utils import mkdir_p, get_date_list
 
 
-def download_data(save_root_path, date_from, date_to, key):
+def download_data(save_root_path, date_from, date_to, interval_minutes, key):
     url_root = 'https://apihub.kma.go.kr/api/typ05/api/GK2A'
     raw_ir_data_dir = save_root_path + '/GK2A/IR'
     raw_rr_data_dir = save_root_path + '/GK2A/RR'
@@ -12,10 +12,10 @@ def download_data(save_root_path, date_from, date_to, key):
     if not os.path.exists(raw_ir_data_dir):
         mkdir_p(raw_ir_data_dir)
 
-    if not os.path.exists(raw_ir_data_dir):
+    if not os.path.exists(raw_rr_data_dir):
         mkdir_p(raw_rr_data_dir)
 
-    date_list = get_date_list(date_from, date_to)
+    date_list = get_date_list(date_from, date_to, interval_minutes=interval_minutes)
     for date in tqdm(date_list):
         ir_url = url_root + f'/LE1B/IR105/KO/data?date={date}&authKey={key}'
         rr_url = url_root + f'/LE2/RR/KO/data?date={date}&authKey={key}'
@@ -37,8 +37,11 @@ def download_data(save_root_path, date_from, date_to, key):
 
 if __name__ == '__main__':
     save_root_path = '/home/jh/data'
-    date_from = '20211001'  # yyyyMMdd
-    date_to = '20220228'  # yyyyMMdd
+    date_from = '20230626'  # yyyyMMdd
+    date_to = '20230720'  # yyyyMMdd
+    interval_minutes = 10  # minutes
     key = 'f3MNOQUmRWKzDTkFJpViXA'  # KMA API Hub Authorization Key
 
-    download_data(save_root_path, date_from, date_to, key)
+    download_data(save_root_path, date_from, date_to, interval_minutes, key)
+
+    print('END!')
