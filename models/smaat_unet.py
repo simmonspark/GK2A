@@ -5,14 +5,9 @@ from torch.nn import init
 import torch.nn.functional as F
 
 '''
-depth wise convolution - RGB 이미지를 생각해보면, R채널 따로 G채널 따로 B채널 따로 컨볼루션을 수행한다. 
-encoder : 이미지 크기를 절반으로 감소시키고(conv), depth를 두 배로 늘리는 MAX pool 2x2 연산을 수행한다.
-4개의 인코더 디코더 모듈을 사용한다. 
-decoder : 업셈플링 -> 스킵커넥션 -> 1x1 conv로 피처맵 아축 
-
 기존 unet과 차이점 
 0. 모든 컨볼루션은 depth wise conv로 
-1. encoder -> cbam 추가 첫번째 더블 conv랑 모든 인코더 위에 배치 
+1. encoder -> cbam 추가 doubble conv 이후에 cbam으로 어텐션 하고, residual을 위해 저장 
 2. conv에서 depth wise conv로 바꿈 
 
 loss 는 mse 씀 이상 정리 끝 
@@ -242,11 +237,14 @@ class SMAT_unet(nn.Module):
 
         self.out = depthwise_separable_conv(nin=64, nout=1, kernel_size=1)
 
+
+
     def forward(self,tensor):
 
         tensor = self.E_1(tensor)
         skip1 = self.cbam_1(tensor)
         tensor = self.max_pool(tensor)
+
 
         tensor = self.E_2(tensor)
         skip2 = self.cbam_2(tensor)

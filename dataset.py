@@ -19,8 +19,7 @@ class Dataset(Dataset):
         self.ir_store = []
         self.rr_store = []
         with ProcessPoolExecutor(max_workers=15) as executor:
-            future_to_images = {executor.submit(process_images, ir, rr): (ir, rr) for ir, rr in
-                                zip(self.ir_list, self.rr_list)}
+            future_to_images = {executor.submit(process_images, ir, rr): (ir, rr) for ir, rr in zip(self.ir_list, self.rr_list)}
             for future in as_completed(future_to_images):
                 try:
                     ir_resized, rr_resized = future.result()

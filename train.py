@@ -51,7 +51,7 @@ cuda.max_memory_allocated('cuda')
 cuda.memory_reserved('cuda')
 cuda.max_memory_reserved('cuda')
 
-wandb.init(project="날씨!", name=MODEL_NAME, config={
+wandb.init(project="bench mark", name=MODEL_NAME, config={
     "learning_rate": LR,
     "batch_size": BATCH_SIZE,
     "epochs": EPOCH,
@@ -64,7 +64,7 @@ if(LOSS_MODE == 'class'):
 
 
 if(MODEL_NAME) == 'resnet' :
-    model = models.resnet152(pretrained=True)
+    model = models.resnet152(pretrained=False)
     model.fc = nn.Sequential(
         nn.Linear(in_features=2048, out_features=2048),
         nn.Linear(in_features=2048, out_features=4096),
@@ -226,6 +226,7 @@ if __name__ == '__main__':
     try:
         if MODE == 'train':
             schedule_loss = []
+            patient = 0
             for i in range(EPOCH):
                 train_step(dataloader=train_loader)
                 print(f'EPOCH : {EPOCH} CURRENT : {i + 1}')
@@ -238,9 +239,12 @@ if __name__ == '__main__':
                     preb_val_loss = schedule_loss.pop(0)
                     current_val_loss = schedule_loss[0]
                     if(current_val_loss>preb_val_loss):
-                        print(f"[stoped by scheduler]: preb_val = {preb_val_loss} current_val = {current_val_loss}, model saved and break ")
+                        patient+=1
+                        print(f"[patient = {patient}]: preb_val = {preb_val_loss} current_val = {current_val_loss},best model 저장 완료! ")
                         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-                        break
+                if(patient == 2):
+                    print(f'patient -> {patient} break train')
+                    break
 
                 gc.collect()
                 torch.cuda.empty_cache()
