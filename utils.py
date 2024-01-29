@@ -4,8 +4,10 @@ import numpy as np
 import netCDF4 as nc
 from sklearn.model_selection import train_test_split
 import torch
+from glob import glob
 
-def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes=60):
+
+def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes=10):
     from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
     to_date = dt.datetime.strptime(yyyymmdd_to, '%Y%m%d')
     to_date += dt.timedelta(days=1)
@@ -18,6 +20,18 @@ def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes=60):
         from_date += delta
 
     return date_list
+
+
+def find_missing_date_from_nc(root_data_path, yyyymmdd_from, yyyymmdd_to, interval_minutes=10):
+    ref_date_list = get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes)
+
+    ir_date_list = [os.path.basename(x)[:-3] for x in glob(root_data_path + '/GK2A/IR/*.nc')]
+    rr_date_list = [os.path.basename(x)[:-3] for x in glob(root_data_path + '/GK2A/RR/*.nc')]
+    date_list = sorted(set(ir_date_list) & set(rr_date_list))
+
+    missing_date_list = list(set(ref_date_list) - set(date_list))
+
+    return missing_date_list
 
 
 def get_nc_list(DIR='/media/sien/DATA/DATA/dataset/GK2A'):
@@ -57,6 +71,8 @@ def mkdir_p(directory):
         return
     mkdir_p(os.path.dirname(directory))
     os.mkdir(directory)
+
+
 '''
 https://www.kma.go.kr/kma/biz/forecast05.jsp
 
@@ -73,6 +89,7 @@ https://www.kma.go.kr/kma/biz/forecast05.jsp
 #
 '''
 
+
 def create_classification_mask(tensor):
     '''
     레이블 텐서 또는 모델의 출력을 받아 4개의 mask를 생성합니다.
@@ -80,13 +97,11 @@ def create_classification_mask(tensor):
     :param tensor:
     :return: mask(tuple)|num-> 4
     '''
-    if(len(tensor.shape)!=4):
-        tensor = tensor.reshape(-1,1,224,224)
+    if (len(tensor.shape) != 4):
+        tensor = tensor.reshape(-1, 1, 224, 224)
     tensor = tensor.to('cpu').detach()
-    mask1 = torch.where((tensor>=1) & (tensor<3),1,0)
-    mask2 = torch.where((tensor>=3) & (tensor<15),1,0)
-    mask3 = torch.where((tensor >= 15) & (tensor < 30),1,0)
-    mask4 = torch.where((tensor >= 30),1,0)
-    return np.array(mask1),np.array(mask2),np.array(mask3),np.array(mask4)
-
-
+    mask1 = torch.where((tensor >= 1) & (tensor < 3), 1, 0)
+    mask2 = torch.where((tensor >= 3) & (tensor < 15), 1, 0)
+    mask3 = torch.where((tensor >= 15) & (tensor < 30), 1, 0)
+    mask4 = torch.where((tensor >= 30), 1, 0)
+    return np.array(mask1), np.array(mask2), np.array(mask3), np.array(mask4)

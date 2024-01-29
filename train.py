@@ -27,18 +27,18 @@ from models.smaat_unet import SMAT_unet
 #
 
 
-MODEL_NAME = 'smat' # resnet unet vit transunet 나머지는 추가 예정
+MODEL_NAME = 'smat'  # resnet unet vit transunet 나머지는 추가 예정
 DEVICE = 'cuda'
 LR = 5e-5
-MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/',MODEL_NAME+'.pt')
+MODEL_SAVE_PATH = os.path.join('/media/sien/DATA/weight/', MODEL_NAME + '.pt')
 EPOCH = 200
-MODE = 'train' # train, test, no_epoch(hard train)
+MODE = 'train'  # train, test, no_epoch(hard train)
 LOAD = False
 RESOLUTION = 224
-LOSS_MODE = 'reg'# reg, class
-#resnet batch4 -> 8g
-#unet batch 8 -> 7g, batch 64 -> 22g
-#vit : batch 4 -> 30g...
+LOSS_MODE = 'reg'  # reg, class
+# resnet batch4 -> 8g
+# unet batch 8 -> 7g, batch 64 -> 22g
+# vit : batch 4 -> 30g...
 BATCH_SIZE = 32
 
 torch.manual_seed(123)
@@ -57,13 +57,12 @@ wandb.init(project="bench mark", name=MODEL_NAME, config={
     "epochs": EPOCH,
 })
 
-if(LOSS_MODE == 'reg'):
+if (LOSS_MODE == 'reg'):
     loss_fn = reg_loss()
-if(LOSS_MODE == 'class'):
+if (LOSS_MODE == 'class'):
     print('이 로스는 망했습니다. ㅜㅜ')
 
-
-if(MODEL_NAME) == 'resnet' :
+if (MODEL_NAME) == 'resnet':
     model = models.resnet152(pretrained=False)
     model.fc = nn.Sequential(
         nn.Linear(in_features=2048, out_features=2048),
@@ -73,7 +72,7 @@ if(MODEL_NAME) == 'resnet' :
     model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
     model = model.to(DEVICE)
 
-if(MODEL_NAME)== 'transunet' :
+if (MODEL_NAME) == 'transunet':
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_path', type=str,
                         default='../data/Synapse/train_npz', help='root dir for data')
@@ -154,61 +153,61 @@ if(MODEL_NAME)== 'transunet' :
     config_vit.n_skip = args.n_skip
     if args.vit_name.find('R50') != -1:
         config_vit.patches.grid = (
-        int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
+            int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
     model = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
 
-if(MODEL_NAME) == 'unet' :
+if (MODEL_NAME) == 'unet':
     model = UNet()
     model = model.to(DEVICE)
 
-if(MODEL_NAME) == 'smat' :
+if (MODEL_NAME) == 'smat':
     model = SMAT_unet()
     model = model.to(DEVICE)
 
-if(MODEL_NAME) == 'vit' :
+if (MODEL_NAME) == 'vit':
     model = VIT()
     model = model.to(DEVICE)
 
-
-optim = torch.optim.Adam(model.parameters(),LR)
+optim = torch.optim.Adam(model.parameters(), LR)
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optim,
-                                            lr_lambda=lambda epoch: 0.95 ** epoch,
-                                            last_epoch=-1,
-                                            verbose=True)
-
+                                              lr_lambda=lambda epoch: 0.95 ** epoch,
+                                              last_epoch=-1,
+                                              verbose=True)
 
 train_ir, train_rr, sample_ir, sample_rr, test_ir, test_rr = get_nc_list('/media/sien/DATA/DATA/dataset/GK2A')
-train_ds = Dataset(train_ir,train_rr)
-sample_ds = Dataset(sample_ir,sample_rr)
-test_ds = Dataset(test_ir,test_rr)
+train_ds = Dataset(train_ir, train_rr)
+sample_ds = Dataset(sample_ir, sample_rr)
+test_ds = Dataset(test_ir, test_rr)
 
-train_loader = DataLoader(train_ds,batch_size=BATCH_SIZE,num_workers=15)
-test_loader = DataLoader(test_ds,batch_size=BATCH_SIZE,num_workers=15)
-sample_loader = DataLoader(sample_ds,batch_size=BATCH_SIZE,num_workers=15)
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, num_workers=15)
+test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, num_workers=15)
+sample_loader = DataLoader(sample_ds, batch_size=BATCH_SIZE, num_workers=15)
 
-
-if LOAD is True :
+if LOAD is True:
     check_point = torch.load(MODEL_SAVE_PATH)
     model.load_state_dict(check_point)
-def train_step(dataloader):
 
-    loop = tqdm(dataloader,leave=True)
+
+def train_step(dataloader):
+    loop = tqdm(dataloader, leave=True)
     model.train()
     loss_list = []
     for x, y in loop:
-        x=x.to(DEVICE)
-        y=y.to(DEVICE)
+        x = x.to(DEVICE)
+        y = y.to(DEVICE)
         pred = model(x)
-        loss = loss_fn(pred,y)
+        loss = loss_fn(pred, y)
         optim.zero_grad()
         loss.backward()
         optim.step()
         loop.set_postfix(loss=loss.item())
         loss_list.append(loss)
 
-    #scheduler.step()
-    wandb.log({"one epoch average loss": sum(loss_list)/len(loss_list)})
-    return sum(loss_list)/len(loss_list)
+    # scheduler.step()
+    wandb.log({"one epoch average loss": sum(loss_list) / len(loss_list)})
+    return sum(loss_list) / len(loss_list)
+
+
 def validation(dataloader):
     loop = tqdm(dataloader, leave=True)
     model.eval()
@@ -222,6 +221,8 @@ def validation(dataloader):
         loss_list.append(loss)
     wandb.log({"validation_one_epoch_loss": sum(loss_list) / len(loss_list)})
     return sum(loss_list) / len(loss_list)
+
+
 if __name__ == '__main__':
     try:
         if MODE == 'train':
@@ -230,19 +231,20 @@ if __name__ == '__main__':
             for i in range(EPOCH):
                 train_step(dataloader=train_loader)
                 print(f'EPOCH : {EPOCH} CURRENT : {i + 1}')
-                if((i+1)%5 == 0):
+                if ((i + 1) % 5 == 0):
                     with torch.no_grad():
                         val_loss = validation(sample_loader)
                         schedule_loss.append(val_loss)
                         print(f'validation_loss is : {val_loss}')
-                if(len(schedule_loss)==2):
+                if (len(schedule_loss) == 2):
                     preb_val_loss = schedule_loss.pop(0)
                     current_val_loss = schedule_loss[0]
-                    if(current_val_loss>preb_val_loss):
-                        patient+=1
-                        print(f"[patient = {patient}]: preb_val = {preb_val_loss} current_val = {current_val_loss},best model 저장 완료! ")
+                    if (current_val_loss > preb_val_loss):
+                        patient += 1
+                        print(
+                            f"[patient = {patient}]: preb_val = {preb_val_loss} current_val = {current_val_loss},best model 저장 완료! ")
                         torch.save(model.state_dict(), MODEL_SAVE_PATH)
-                if(patient == 2):
+                if (patient == 2):
                     print(f'patient -> {patient} break train')
                     break
 
@@ -255,7 +257,7 @@ if __name__ == '__main__':
             flag = 10000
             ep_cnt = 0
             while True:
-                ep_cnt+=1
+                ep_cnt += 1
                 loss = train_step(dataloader=train_loader)
                 if (loss < 100):
                     torch.save(model.state_dict(), MODEL_SAVE_PATH)
@@ -275,21 +277,19 @@ if __name__ == '__main__':
         print("KeyboardInterrupt! model_saved! ")
         torch.save(model.state_dict(), MODEL_SAVE_PATH)
 
-    if MODE == 'test' :
+    if MODE == 'test':
 
-        for x,y in test_loader:
-            x=x.to(DEVICE)
+        for x, y in test_loader:
+            x = x.to(DEVICE)
             model = model.eval()
             pred = model(x)
             x_single = x[0].cpu().detach().numpy().squeeze()
             pred_single = pred[0].cpu().detach().numpy().squeeze()
-            x_single = np.abs(np.reshape(x_single, (224, 224))+0.1)
-            pred_single = np.abs(np.reshape(pred_single*100.0, (224, 224)))
+            x_single = np.abs(np.reshape(x_single, (224, 224)) + 0.1)
+            pred_single = np.abs(np.reshape(pred_single * 100.0, (224, 224)))
             rgb_image = np.stack([x_single, pred_single, pred_single], axis=-1)
             plt.figure(figsize=(6, 6))
             plt.imshow(rgb_image)
             plt.title('Rain fall prediction')
-            mask1,mask2,mask3,mask4 = ccm(pred_single)
+            mask1, mask2, mask3, mask4 = ccm(pred_single)
             plt.show()
-
-
