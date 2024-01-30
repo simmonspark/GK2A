@@ -1,0 +1,35 @@
+---
+wandb:
+  flag: false
+  project_name: ir2rr
+  entity: munjonghyeon
+
+dataset:
+  root_path: "/home/jh/data/"
+  interval_minutes: 10
+  img_size: 224
+  train:
+    batch_size: 4
+    date_from: '20230601'
+    date_to: '20230605'
+    shuffle: True
+
+  eval:
+    batch_size: 4
+    date_from: '2023066'
+    date_to: '20230607'
+    shuffle: False
+
+fit:
+  model: unet
+  model_save_flag: False                   # True: save model, False: not save model
+  model_save_path: "./"
+
+  train_flag: True
+  learning_rate: 5e-5
+  epochs: 200
+  loss: reg
+  optimizer: Adam
+
+  eval_flag: True
+  eval_interval: 1
