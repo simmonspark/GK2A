@@ -9,6 +9,28 @@ import torchvision.transforms as transforms
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
+def get_sampler_idx(total_list,missing_list,sequence_len=3):
+    remain = len(total_list) % sequence_len
+
+    if remain != 0:
+        total_list = total_list[:-(remain)]
+        print(f'remain num : {remain} is deleted!')
+
+    miss_idx = [total_list.index(i) for i in missing_list]
+    store = [i for i , _ in enumerate(total_list)]
+    for_del_idx_store = []
+
+
+    while miss_idx:
+        idx = miss_idx.pop(0)
+        R = range(idx-sequence_len,idx+1,1)
+        for i in R:
+            if(i>=0):
+                for_del_idx_store.append(i)
+    A = set(for_del_idx_store)
+    B = set(store)
+    C = B - A
+    return list(C)
 
 def process_images(ir_path, rr_path):
     ir_img, rr_img = create_one_img_label(ir_path, rr_path)
@@ -74,6 +96,11 @@ class Single_Channel_Dataset(Dataset):
 
             else:
                 self.missing_date.append(date)
+        self.ir_img_list=np.array(self.ir_img_list,dtype=float)
+        self.rr_img_list=np.array(self.rr_img_list,dtype=float)
+
+        self.sampler_idx = get_sampler_idx(total_list=date_list,missing_list=self.missing_date)
+        print()
 
         print(f'Dataset Size: {len(self.ir_img_list)}')
         print(f'Number of Missing Date: {len(self.missing_date)}')
@@ -89,7 +116,6 @@ class Single_Channel_Dataset(Dataset):
         rr = torch.Tensor(rr)
 
         return ir.unsqueeze(0), rr.unsqueeze(0)
-
 
 if __name__ == '__main__':
     root_data_path = '/home/jh/data'
