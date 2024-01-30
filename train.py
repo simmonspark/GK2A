@@ -1,25 +1,27 @@
-import torchvision.models as models
-import torch.nn as nn
-from utils import get_nc_list
-from torch.utils.data import DataLoader
-from dataset import Single_Channel_Dataset
-from loss_fn import loss_fn as reg_loss
-from models.vit_patch28 import VIT
-from tqdm import tqdm
-import numpy as np
-import matplotlib.pyplot as plt
-from models.Unet import UNet
-import os
-from torch import cuda
-import torch, gc
-import wandb
-import random
 import argparse
+import os
+import random
+
+import gc
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 import torch.backends.cudnn as cudnn
-from networks.vit_seg_modeling import VisionTransformer as ViT_seg
-from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
-from utils import create_classification_mask as ccm
+import torch.nn as nn
+import torchvision.models as models
+import wandb
+from torch import cuda
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+from dataset import Dataset
+from loss_fn import loss_fn as reg_loss
+from models.Unet import UNet
 from models.smaat_unet import SMAT_unet
+from models.vit_patch28 import VIT
+from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
+from networks.vit_seg_modeling import VisionTransformer as ViT_seg
+from utils import create_classification_mask as ccm
 
 ########################################
 # 여기서 모델만 바꾸고, MODE 수정 후 돌리세염 #
@@ -181,7 +183,7 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer=optim,
 
 
 
-sample_ds = Single_Channel_Dataset('/media/sien/DATA/DATA/dataset','20230701','20230703',interval=10,img_size=256)
+sample_ds = Dataset('/media/sien/DATA/DATA/dataset','20230701','20230703',interval=10,img_size=256)
 
 
 sample_loader = DataLoader(sample_ds, batch_size=BATCH_SIZE, num_workers=15)
