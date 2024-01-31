@@ -15,6 +15,8 @@ loss 는 mse 씀 이상 정리 끝
 
 '''
 IMG_C = 1
+
+
 class ChannelAttention(nn.Module):
     def __init__(self, channel, reduction=16):
         super().__init__()
@@ -81,15 +83,18 @@ class CBAMBlock(nn.Module):
 
 
 class depthwise_separable_conv(nn.Module):
-    def __init__(self, nin, nout, kernel_size = 3, padding = 0, stride=1 ,bias=False):
+    def __init__(self, nin, nout, kernel_size=3, padding=0, stride=1, bias=False):
         super(depthwise_separable_conv, self).__init__()
-        self.depthwise = nn.Conv2d(nin, nin, kernel_size=kernel_size,stride=stride, padding=padding, groups=nin, bias=bias)
+        self.depthwise = nn.Conv2d(nin, nin, kernel_size=kernel_size, stride=stride, padding=padding, groups=nin,
+                                   bias=bias)
         self.pointwise = nn.Conv2d(nin, nout, kernel_size=1, bias=bias)
 
     def forward(self, x):
         out = self.depthwise(x)
         out = self.pointwise(out)
         return out
+
+
 class DepthwiseSeparableConv(nn.Module):
     def __init__(self, in_channels, output_channels, kernel_size, padding=0, kernels_per_layer=1):
         super(DepthwiseSeparableConv, self).__init__()
@@ -107,6 +112,7 @@ class DepthwiseSeparableConv(nn.Module):
         x = self.depthwise(x)
         x = self.pointwise(x)
         return x
+
 
 class DoubleConvDS(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
@@ -138,6 +144,8 @@ class DoubleConvDS(nn.Module):
 
     def forward(self, x):
         return self.double_conv(x)
+
+
 class UpDS(nn.Module):
     """Upscaling then double conv"""
 
@@ -169,11 +177,13 @@ class UpDS(nn.Module):
         # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
+
+
 class SMAT_unet(nn.Module):
     def __init__(self):
-        super(SMAT_unet,self).__init__()
-        self.dic_bam = [64,128,256,512,512]
-        self.dic_conv = [1,32,64,96,128,176,256,384,512,512,512]
+        super(SMAT_unet, self).__init__()
+        self.dic_bam = [64, 128, 256, 512, 512]
+        self.dic_conv = [1, 32, 64, 96, 128, 176, 256, 384, 512, 512, 512]
         self.for_skip = []
 
         self.cbam_1 = CBAMBlock(channel=self.dic_bam[0])
@@ -182,46 +192,49 @@ class SMAT_unet(nn.Module):
         self.cbam_4 = CBAMBlock(channel=self.dic_bam[3])
         self.cbam_5 = CBAMBlock(channel=self.dic_bam[4])
 
-
         self.max_pool = nn.MaxPool2d(kernel_size=(2))
-
 
         self.E_1 = nn.Sequential(OrderedDict(
             [
-                (f'conv1',depthwise_separable_conv(nin=self.dic_conv[0],nout=self.dic_conv[1],stride=1,padding='same')),
-                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[1], nout=self.dic_conv[2],padding='same')),
+                (f'conv1',
+                 depthwise_separable_conv(nin=self.dic_conv[0], nout=self.dic_conv[1], stride=1, padding='same')),
+                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[1], nout=self.dic_conv[2], padding='same')),
                 (f'BN', nn.BatchNorm2d(num_features=self.dic_conv[2])),
                 (f'RELU', nn.ReLU())
             ]
         ))
         self.E_2 = nn.Sequential(OrderedDict(
             [
-                (f'conv1', depthwise_separable_conv(nin=self.dic_conv[2], nout=self.dic_conv[3],stride=1,padding='same')),
-                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[3], nout=self.dic_conv[4],padding='same')),
+                (f'conv1',
+                 depthwise_separable_conv(nin=self.dic_conv[2], nout=self.dic_conv[3], stride=1, padding='same')),
+                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[3], nout=self.dic_conv[4], padding='same')),
                 (f'BN', nn.BatchNorm2d(num_features=self.dic_conv[4])),
                 (f'RELU', nn.ReLU())
             ]
         ))
         self.E_3 = nn.Sequential(OrderedDict(
             [
-                (f'conv1', depthwise_separable_conv(nin=self.dic_conv[4], nout=self.dic_conv[5],stride=1,padding='same')),
-                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[5], nout=self.dic_conv[6],padding='same')),
+                (f'conv1',
+                 depthwise_separable_conv(nin=self.dic_conv[4], nout=self.dic_conv[5], stride=1, padding='same')),
+                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[5], nout=self.dic_conv[6], padding='same')),
                 (f'BN', nn.BatchNorm2d(num_features=self.dic_conv[6])),
                 (f'RELU', nn.ReLU())
             ]
         ))
         self.E_4 = nn.Sequential(OrderedDict(
             [
-                (f'conv1', depthwise_separable_conv(nin=self.dic_conv[6], nout=self.dic_conv[7],stride=1,padding='same')),
-                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[7], nout=self.dic_conv[8],padding='same')),
+                (f'conv1',
+                 depthwise_separable_conv(nin=self.dic_conv[6], nout=self.dic_conv[7], stride=1, padding='same')),
+                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[7], nout=self.dic_conv[8], padding='same')),
                 (f'BN', nn.BatchNorm2d(num_features=self.dic_conv[8])),
                 (f'RELU', nn.ReLU())
             ]
         ))
         self.E_5 = nn.Sequential(OrderedDict(
             [
-                (f'conv1', depthwise_separable_conv(nin=self.dic_conv[8], nout=self.dic_conv[9],stride=1,padding='same')),
-                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[9], nout=self.dic_conv[10],padding='same')),
+                (f'conv1',
+                 depthwise_separable_conv(nin=self.dic_conv[8], nout=self.dic_conv[9], stride=1, padding='same')),
+                (f'conv2', depthwise_separable_conv(nin=self.dic_conv[9], nout=self.dic_conv[10], padding='same')),
                 (f'BN', nn.BatchNorm2d(num_features=self.dic_conv[10])),
                 (f'RELU', nn.ReLU())
             ]
@@ -237,14 +250,10 @@ class SMAT_unet(nn.Module):
 
         self.out = depthwise_separable_conv(nin=64, nout=1, kernel_size=1)
 
-
-
-    def forward(self,tensor):
-
+    def forward(self, tensor):
         tensor = self.E_1(tensor)
         skip1 = self.cbam_1(tensor)
         tensor = self.max_pool(tensor)
-
 
         tensor = self.E_2(tensor)
         skip2 = self.cbam_2(tensor)
@@ -260,24 +269,17 @@ class SMAT_unet(nn.Module):
         tensor = self.E_5(tensor)
         tensor = self.cbam_5(tensor)
 
-        tensor = self.up1(tensor, skip4 )
+        tensor = self.up1(tensor, skip4)
         tensor = self.up2(tensor, skip3)
         tensor = self.up3(tensor, skip2)
         tensor = self.up4(tensor, skip1)
         tensor = self.out(tensor)
 
-
         return tensor
 
 
-
-
 if __name__ == "__main__":
-    dummy = torch.randn(size=(4,1,288,288))
+    dummy = torch.randn(size=(4, 1, 288, 288))
     model = SMAT_unet()
     pred = model(dummy)
     print()
-
-
-
-

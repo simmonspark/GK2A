@@ -1,5 +1,6 @@
 import os
 import random
+import datetime
 
 import gc
 import numpy as np
@@ -10,6 +11,7 @@ from torch import cuda
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from config import get_config
+from models import get_model
 from dataset import IR2RR_Dataset
 from loss_fn import loss_fn as reg_loss
 from models.Unet import UNet
@@ -35,9 +37,6 @@ cuda.max_memory_allocated('cuda')
 cuda.memory_reserved('cuda')
 cuda.max_memory_reserved('cuda')
 
-
-
-
 if LOSS_MODE == 'reg':
     loss_fn = reg_loss()
 
@@ -46,8 +45,6 @@ if MODEL_NAME == 'unet':
     model = model.to(DEVICE)
 
 optim = torch.optim.Adam(model.parameters(), LR)
-
-
 
 
 def train_step(dataloader):
@@ -103,8 +100,33 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.train.batch_size, shuffle=cfg.dataset.train.shuffle)
     eval_loader = DataLoader(eval_dataset, batch_size=cfg.dataset.eval.batch_size, shuffle=cfg.dataset.eval.shuffle)
 
+    model = get_model(cfg)
+    opt = optimizer(
+        model_params=model.parameters(),
+        learning_rate=cfg.fit.learning_rate,
+        optim=cfg.fit.optimizer)
+    criterion = loss_fn(loss_name=cfg.fit.loss)
+
+    if cfg.wandb.flag and cfg.fit.train_flag:
+        wandb.init(project=cfg.wandb.project_name,
+                   entity=cfg.wandb.entity,
+                   name=cfg.fit.model + "/" +
+                        cfg.dataset.train.date_from + "~" +
+                        cfg.dataset.train.date_to + "/" +
+                        cfg.dataset.eval.date_from + "~" +
+                        cfg.dataset.eval.date_to + "/" +
+                        str(cfg.dataset.img_size) + "/" +
+                        datetime.datetime.now().strftime('%m-%d%H:%M:%S'))
+
+        wandb.config = {"learning_rate": cfg.fit.learning_rate,
+                        "epochs": cfg.fit.epochs,
+                        "train_batch_size": cfg.dataset.train.batch_size,
+                        "eval_batch_size": cfg.dataset.eval.batch_size}
+
+        wandb.watch(model, log="all", log_freq=10)
+
     try:
-        if MODE == 'train':
+        if cfg.fit.train_flag:
             schedule_loss = []
             patient = 0
             for i in range(EPOCH):

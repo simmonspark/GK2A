@@ -6,16 +6,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
+
 device = torch.device('cuda:0')
 torch.cuda.set_device(device)
 
-PATCH_SIZE  = 1
+PATCH_SIZE = 1
 IMG_SIZE = 14
 IMG_CHANNEL = 1024
-TOKEN_NUM = (IMG_SIZE//PATCH_SIZE)**2 +1
+TOKEN_NUM = (IMG_SIZE // PATCH_SIZE) ** 2 + 1
 ATTENTION_HEAD_NUM = 4
 EMBEDDING_DEPTH = 256
 BATCH_SIZE = 1
+
+
 def np2th(weights, conv=False):
     """Possibly convert HWIO to OIHW."""
     if conv:
@@ -50,7 +53,7 @@ class PreActBottleneck(nn.Module):
     def __init__(self, cin, cout=None, cmid=None, stride=1):
         super().__init__()
         cout = cout or cin
-        cmid = cmid or cout//4
+        cmid = cmid or cout // 4
 
         self.gn1 = nn.GroupNorm(32, cmid, eps=1e-6)
         self.conv1 = conv1x1(cin, cmid, bias=False)
@@ -117,6 +120,7 @@ class PreActBottleneck(nn.Module):
             self.gn_proj.weight.copy_(proj_gn_weight.view(-1))
             self.gn_proj.bias.copy_(proj_gn_bias.view(-1))
 
+
 class ResNetV2(nn.Module):
     """Implementation of Pre-activation (v2) ResNet mode."""
 
@@ -134,17 +138,20 @@ class ResNetV2(nn.Module):
 
         self.body = nn.Sequential(OrderedDict([
             ('block1', nn.Sequential(OrderedDict(
-                [('unit1', PreActBottleneck(cin=width, cout=width*4, cmid=width))] +
-                [(f'unit{i:d}', PreActBottleneck(cin=width*4, cout=width*4, cmid=width)) for i in range(2, block_units[0] + 1)],
-                ))),
+                [('unit1', PreActBottleneck(cin=width, cout=width * 4, cmid=width))] +
+                [(f'unit{i:d}', PreActBottleneck(cin=width * 4, cout=width * 4, cmid=width)) for i in
+                 range(2, block_units[0] + 1)],
+            ))),
             ('block2', nn.Sequential(OrderedDict(
-                [('unit1', PreActBottleneck(cin=width*4, cout=width*8, cmid=width*2, stride=2))] +
-                [(f'unit{i:d}', PreActBottleneck(cin=width*8, cout=width*8, cmid=width*2)) for i in range(2, block_units[1] + 1)],
-                ))),
+                [('unit1', PreActBottleneck(cin=width * 4, cout=width * 8, cmid=width * 2, stride=2))] +
+                [(f'unit{i:d}', PreActBottleneck(cin=width * 8, cout=width * 8, cmid=width * 2)) for i in
+                 range(2, block_units[1] + 1)],
+            ))),
             ('block3', nn.Sequential(OrderedDict(
-                [('unit1', PreActBottleneck(cin=width*8, cout=width*16, cmid=width*4, stride=2))] +
-                [(f'unit{i:d}', PreActBottleneck(cin=width*16, cout=width*16, cmid=width*4)) for i in range(2, block_units[2] + 1)],
-                ))),
+                [('unit1', PreActBottleneck(cin=width * 8, cout=width * 16, cmid=width * 4, stride=2))] +
+                [(f'unit{i:d}', PreActBottleneck(cin=width * 16, cout=width * 16, cmid=width * 4)) for i in
+                 range(2, block_units[2] + 1)],
+            ))),
         ]))
 
     def forward(self, x):
@@ -153,9 +160,9 @@ class ResNetV2(nn.Module):
         x = self.root(x)
         features.append(x)
         x = nn.MaxPool2d(kernel_size=3, stride=2, padding=0)(x)
-        for i in range(len(self.body)-1):
+        for i in range(len(self.body) - 1):
             x = self.body[i](x)
-            right_size = int(in_size / 4 / (i+1))
+            right_size = int(in_size / 4 / (i + 1))
             if x.size()[2] != right_size:
                 pad = right_size - x.size()[2]
                 assert pad < 3 and pad > 0, "x {} should {}".format(x.size(), right_size)
@@ -167,48 +174,52 @@ class ResNetV2(nn.Module):
         x = self.body[-1](x)
         return x, features[::-1]
 
+
 class Patch_Embadding(nn.Module):
     def __init__(self):
-        super(Patch_Embadding,self).__init__()
+        super(Patch_Embadding, self).__init__()
         self.patch_size = PATCH_SIZE
         self.projection_channel = EMBEDDING_DEPTH
         self.img_size = IMG_SIZE
         self.img_channel = IMG_CHANNEL
         self.projection = nn.Sequential(
-            nn.Conv2d(in_channels=1024,out_channels=self.projection_channel,kernel_size=self.patch_size,stride=self.patch_size),
+            nn.Conv2d(in_channels=1024, out_channels=self.projection_channel, kernel_size=self.patch_size,
+                      stride=self.patch_size),
             Rearrange('b e w h -> b (w h) e')
         )
-        self.cls_token = nn.Parameter(torch.randn(BATCH_SIZE,1,self.projection_channel))
-        self.position_token = nn.Parameter(torch.randn((self.img_size//self.patch_size)**2 +1,self.projection_channel))
+        self.cls_token = nn.Parameter(torch.randn(BATCH_SIZE, 1, self.projection_channel))
+        self.position_token = nn.Parameter(
+            torch.randn((self.img_size // self.patch_size) ** 2 + 1, self.projection_channel))
 
-    def forward(self,tensor):
+    def forward(self, tensor):
         tensor = self.projection(tensor)
-        #cls_token = repeat(self.cls_token,'() n e -> b n e',b=BATCH_SIZE)
-        tensor = torch.cat([tensor,self.cls_token],dim=1)
+        # cls_token = repeat(self.cls_token,'() n e -> b n e',b=BATCH_SIZE)
+        tensor = torch.cat([tensor, self.cls_token], dim=1)
         tensor += self.position_token
         return tensor
+
+
 class Multi_Head_Attention(nn.Module):
     def __init__(self):
-        super(Multi_Head_Attention,self).__init__()
-        self.q = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
-        self.k = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
-        self.v = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
+        super(Multi_Head_Attention, self).__init__()
+        self.q = nn.Linear(in_features=EMBEDDING_DEPTH, out_features=EMBEDDING_DEPTH)
+        self.k = nn.Linear(in_features=EMBEDDING_DEPTH, out_features=EMBEDDING_DEPTH)
+        self.v = nn.Linear(in_features=EMBEDDING_DEPTH, out_features=EMBEDDING_DEPTH)
         self.att_drop = nn.Dropout(0.5)
-        self.projection = nn.Linear(in_features=EMBEDDING_DEPTH,out_features=EMBEDDING_DEPTH)
+        self.projection = nn.Linear(in_features=EMBEDDING_DEPTH, out_features=EMBEDDING_DEPTH)
 
-    def forward(self,tensor):
+    def forward(self, tensor):
+        q = rearrange(self.q(tensor), 'b n (h d) -> b h n d', b=BATCH_SIZE, h=ATTENTION_HEAD_NUM)
+        k = rearrange(self.k(tensor), 'b n (h d) -> b h n d', b=BATCH_SIZE, h=ATTENTION_HEAD_NUM)
+        v = rearrange(self.v(tensor), 'b n (h d) -> b h n d', b=BATCH_SIZE, h=ATTENTION_HEAD_NUM)
 
-        q = rearrange(self.q(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
-        k = rearrange(self.k(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
-        v = rearrange(self.v(tensor),'b n (h d) -> b h n d',b=BATCH_SIZE,h = ATTENTION_HEAD_NUM)
-
-        energy = torch.einsum('b h q d , b n k d -> b h q k ',q,k)
-        att = F.softmax(energy,dim=-1)/EMBEDDING_DEPTH**(1/2)
+        energy = torch.einsum('b h q d , b n k d -> b h q k ', q, k)
+        att = F.softmax(energy, dim=-1) / EMBEDDING_DEPTH ** (1 / 2)
         att = self.att_drop(att)
-        out = torch.matmul(att,v)
+        out = torch.matmul(att, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
         out = self.projection(out)
-        out +=tensor
+        out += tensor
         return out
 
 
@@ -226,48 +237,57 @@ class MLP(nn.Module):
         x = self.mlp(tensor)
         x += tensor
         return x
+
+
 class ENCODER_BLOCK(nn.Module):
     def __init__(self):
         super(ENCODER_BLOCK, self).__init__()
         self.mha = Multi_Head_Attention()
         self.mlp = MLP()
-    def forward(self,tensor):
+
+    def forward(self, tensor):
         tensor = self.mha(tensor)
         tensor = self.mlp(tensor)
         return tensor
+
+
 class MLP_HEAD(nn.Module):
     def __init__(self):
-        super(MLP_HEAD,self).__init__()
-        self.norm = nn.LayerNorm(TOKEN_NUM*EMBEDDING_DEPTH)
-        self.linear = nn.Linear(TOKEN_NUM*EMBEDDING_DEPTH,38612)
-    def forward(self,tensor):
+        super(MLP_HEAD, self).__init__()
+        self.norm = nn.LayerNorm(TOKEN_NUM * EMBEDDING_DEPTH)
+        self.linear = nn.Linear(TOKEN_NUM * EMBEDDING_DEPTH, 38612)
+
+    def forward(self, tensor):
         tensor = rearrange(tensor, 'b n d -> b (n d)')
         tensor = self.norm(tensor)
         tensor = self.linear(tensor)
         return tensor
+
+
 class VIT(nn.Module):
-    def __init__(self,encoder_block_num = 8):
-        super(VIT,self).__init__()
+    def __init__(self, encoder_block_num=8):
+        super(VIT, self).__init__()
         self.block_num = encoder_block_num
         self.patch_embedding = Patch_Embadding()
         self.encoder_block = ENCODER_BLOCK()
         self.mlp_head = MLP_HEAD()
 
-    def forward(self,tensor):
+    def forward(self, tensor):
         tensor = self.patch_embedding(tensor)
         for i in range(self.block_num):
             tensor = self.encoder_block(tensor)
         tensor = self.mlp_head(tensor)
         return tensor
+
+
 class TransUnet(nn.Module):
     def __init__(self):
-        super(TransUnet,self).__init__()
+        super(TransUnet, self).__init__()
         self.vit = VIT()
-        self.resnet = ResNetV2(block_units=(3,4,6), width_factor=1)
-
+        self.resnet = ResNetV2(block_units=(3, 4, 6), width_factor=1)
 
         self.block1 = nn.Sequential(
-            nn.Conv2d(in_channels=197,out_channels=512,kernel_size=(3,3),stride=1,padding='same'),
+            nn.Conv2d(in_channels=197, out_channels=512, kernel_size=(3, 3), stride=1, padding='same'),
             nn.BatchNorm2d(num_features=512),
             nn.ReLU()
         )
@@ -294,15 +314,14 @@ class TransUnet(nn.Module):
         self.block5_3 = nn.BatchNorm2d(num_features=1)
         self.block5_4 = nn.ReLU(inplace=True)
 
-
-    def forward(self,tensor):
-        proj,skip = self.resnet(tensor)
+    def forward(self, tensor):
+        proj, skip = self.resnet(tensor)
 
         def vit_checkpoint(proj):
             return self.vit(proj)
 
         before_upconv = checkpoint(vit_checkpoint, proj)
-        before_upconv = torch.reshape(before_upconv,(BATCH_SIZE,TOKEN_NUM,14,14))
+        before_upconv = torch.reshape(before_upconv, (BATCH_SIZE, TOKEN_NUM, 14, 14))
         tensor = self.block1(before_upconv)
 
         tensor = self.block2_1(tensor)
@@ -313,9 +332,9 @@ class TransUnet(nn.Module):
 
         tensor = self.block3_1(tensor)
         tensor = torch.concat([tensor, skip[1]], dim=1)
-        tensor =self.block3_2(tensor)
-        tensor =self.block3_3(tensor)
-        tensor =self.block3_4(tensor)
+        tensor = self.block3_2(tensor)
+        tensor = self.block3_3(tensor)
+        tensor = self.block3_4(tensor)
 
         tensor = self.block4_1(tensor)
         tensor = torch.concat([tensor, skip[2]], dim=1)
@@ -328,11 +347,11 @@ class TransUnet(nn.Module):
         tensor = self.block5_3(tensor)
         tensor = self.block5_4(tensor)
 
-
         return tensor
 
+
 if __name__ == "__main__":
-    dummy = torch.randn(size=(BATCH_SIZE,1,224,224)).to('cuda')
+    dummy = torch.randn(size=(BATCH_SIZE, 1, 224, 224)).to('cuda')
     model = TransUnet().to('cuda')
     pred = model(dummy)
     print()
