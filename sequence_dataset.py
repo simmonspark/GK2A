@@ -8,7 +8,7 @@ import netCDF4 as nc
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-debug_img = np.array(cv.resize(cv.cvtColor(plt.imread('./pred_example/debug_img.jpeg'),cv.COLOR_BGR2GRAY),dsize=(256,256)),dtype=float)/256
+debug_img = np.array(cv.resize(cv.cvtColor(plt.imread('/media/sien/DATA/다운로드/debug_img.jpeg'),cv.COLOR_BGR2GRAY),dsize=(256,256)),dtype=float)/256
 
 def get_sampler_idx(total_list,missing_list,sequence_len=3):
     remain = len(total_list) % sequence_len
