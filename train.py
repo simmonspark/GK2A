@@ -16,9 +16,9 @@ from tqdm import tqdm
 
 from dataset import Dataset
 from loss_fn import loss_fn as reg_loss
-from models.Unet import UNet
-from models.smaat_unet import SMAT_unet
-from models.vit_patch28 import VIT
+from nets.Unet import UNet
+from nets.smaat_unet import SMAT_unet
+from nets.vit_patch28 import VIT
 from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
 from networks.vit_seg_modeling import VisionTransformer as ViT_seg
 from utils import create_classification_mask as ccm

@@ -1,8 +1,9 @@
-from models.Unet import UNet
-from models.smaat_unet import SMAT_unet
-from models.TransUnet import TransUnet
-from models.vit_patch28 import VIT
-from models.Resnet import Resnet
+from nets.Unet import UNet
+from nets.smaat_unet import SMAT_unet
+from nets.TransUnet import TransUnet
+from nets.vit_patch28 import VIT
+from nets.Resnet import Resnet
+from log import log_warning
 
 
 def get_model(cfg):
@@ -11,6 +12,7 @@ def get_model(cfg):
 
     """
     :param model_name: model name
+    :param img_size: image size
     :return: model
     """
 
@@ -24,5 +26,8 @@ def get_model(cfg):
         model = VIT()
     elif model_name == "resnet":
         model = Resnet(img_size)
+    else:
+        log_warning("pls implemented model")
+        raise NotImplementedError("implement a custom model(%s)" % model_name)
 
     return model.cuda()

@@ -1,6 +1,6 @@
 ---
 wandb:
-  flag: false
+  flag: True
   project_name: ir2rr
   entity: munjonghyeon
 
@@ -9,14 +9,14 @@ dataset:
   interval_minutes: 10
   img_size: 224
   train:
-    batch_size: 4
+    batch_size: 8
     date_from: '20230601'
     date_to: '20230605'
     shuffle: True
 
   eval:
-    batch_size: 4
-    date_from: '2023066'
+    batch_size: 8
+    date_from: '20230606'
     date_to: '20230607'
     shuffle: False
 
@@ -28,7 +28,7 @@ fit:
   train_flag: True
   learning_rate: 5e-5
   epochs: 200
-  loss: reg
+  loss: MSE
   optimizer: Adam
 
   eval_flag: True

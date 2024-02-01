@@ -65,8 +65,8 @@ class Dataset(Dataset):
         ir = self.ir_store[idx]
         rr = self.rr_store[idx]
 
-        ir = torch.Tensor(ir)
-        rr = torch.Tensor(rr)
+        ir = torch.Tensor(ir).to('cuda')
+        rr = torch.Tensor(rr).to('cuda')
 
         return ir.unsqueeze(0), rr.unsqueeze(0)
 
@@ -116,8 +116,8 @@ class IR2RR_Dataset(Dataset):
         ir = self.ir_img_list[idx]
         rr = self.rr_img_list[idx]
 
-        ir = torch.Tensor(ir)
-        rr = torch.Tensor(rr)
+        ir = torch.Tensor(ir).to('cuda')
+        rr = torch.Tensor(rr).to('cuda')
 
         return ir.unsqueeze(0), rr.unsqueeze(0)
 
