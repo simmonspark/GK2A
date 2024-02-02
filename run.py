@@ -20,9 +20,9 @@ def run(model, optimizer, criterion, cfg, dataloaders):
                 if best_loss > val_loss:
                     best_loss = val_loss
                     if cfg.fit.model_save_flag:
-                        torch.save(model.state_dict(), save_dir + "BEST_" + cfg.fit.model
-                                   + "_" + cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to
-                                   + "_imgsize" + str(cfg.fit.img_size) + ".pt")
+                        torch.save(model.state_dict(), save_dir + "BEST_" + cfg.fit.model + "_" +
+                                   cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to + "_imgsize"
+                                   + str(cfg.dataset.img_size) + ".pt")
 
                 gc.collect()
                 torch.cuda.empty_cache()
