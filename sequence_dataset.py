@@ -92,6 +92,8 @@ class Sampler_Dataset(Dataset):
             return ir
         elif self.ir_only is False :
             return rr
+
+
 class SEQ_Sampler(Sampler):
     def __init__(self,index):
         super(SEQ_Sampler,self).__init__()

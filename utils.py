@@ -5,7 +5,10 @@ import netCDF4 as nc
 from sklearn.model_selection import train_test_split
 import torch
 from glob import glob
-
+import os
+import gc
+import cv2 as cv
+import pandas as pd
 
 def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes=10):
     from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
@@ -105,3 +108,83 @@ def create_classification_mask(tensor):
     mask3 = torch.where((tensor >= 15) & (tensor < 30), 1, 0)
     mask4 = torch.where((tensor >= 30), 1, 0)
     return np.array(mask1), np.array(mask2), np.array(mask3), np.array(mask4)
+
+
+def get_ir_total_min_max(data_dir = '/media/sien/DATA/DATA/dataset/GK2A'):
+    ir_path = os.path.join(data_dir,'IR/')
+    rr_path = os.path.join(data_dir,'RR/')
+    re_save_path = '/media/sien/DATA/DATA/dataset/GK2A_224'
+    file_name_list = [ file_name for file_dir,_,file_name in os.walk(ir_path)][0]
+
+    ir_value = [
+        nc.Dataset(os.path.join(ir_path,i)).variables['image_pixel_values'][:]
+        for i in file_name_list
+    ]
+    ir_max = np.array([i.max() for i in ir_value]).max()
+    ir_min = np.array([i.min() for i in ir_value]).min()
+
+    del ir_value
+    gc.collect()
+    rr_value = [
+        nc.Dataset(os.path.join(rr_path, i)).variables['RR'][:]
+        for i in file_name_list
+    ]
+    ir_max = np.array([i.max() for i in rr_value]).max()
+    ir_min = np.array([i.min() for i in rr_value]).min()
+    print()
+def get_rr_total_min_max(data_dir = '/media/sien/DATA/DATA/dataset/GK2A'):
+    ir_path = os.path.join(data_dir,'IR/')
+    rr_path = os.path.join(data_dir,'RR/')
+    file_name_list = [ file_name for file_dir,_,file_name in os.walk(ir_path)][0]
+    max = -10000
+    min = 10000
+
+    for i in file_name_list:
+        rr = nc.Dataset(os.path.join(rr_path,i))
+        img = np.array(rr.variables['RR'][:])
+        if img.max()>max:
+            max = img.max()
+        if img.min()<min:
+            min = img.min()
+        rr.close()
+    print()
+
+def EDA(data_dir = '/media/sien/DATA/DATA/dataset/GK2A'):
+    ir_path = os.path.join(data_dir, 'IR/')
+    rr_path = os.path.join(data_dir, 'RR/')
+    ir_name_list = [file_name for file_dir, _, file_name in os.walk(ir_path)][0]
+    rr_name_list = [file_name for file_dir, _, file_name in os.walk(rr_path)][0]
+    ir_path_list = [os.path.join(ir_path,i)for i in ir_name_list]
+    rr_path_list = [os.path.join(rr_path, i) for i in rr_name_list]
+    ir_df  = []
+    for idx,i in enumerate(ir_path_list):
+
+        ds = nc.Dataset(i)
+        img = np.array(ds.variables['image_pixel_values'][:])
+        mean = img.mean()
+        std = img.std()
+        max = img.max()
+        min = img.min()
+        ir_df.append({'file_name':ir_name_list[idx], 'mean':mean,'std':std,'min':min,'max':max})
+    ir_df = pd.DataFrame(ir_df)
+    ir_df.to_csv('/media/sien/Samsung_T5/와따시 파일/plot/ir_df.csv')
+
+    rr_df = []
+    for idx,i in enumerate(rr_path_list):
+        ds = nc.Dataset(i)
+        img = np.array(ds.variables['RR'][:])
+        mean = img.mean()
+        std = img.std()
+        max = img.max()
+        min = img.min()
+        rr_df.append({'file_name':ir_name_list[idx], 'mean':mean,'std':std,'min':min,'max':max})
+    rr_df = pd.DataFrame(rr_df)
+    rr_df.to_csv('/media/sien/Samsung_T5/와따시 파일/plot/rr_df.csv')
+    print()
+
+
+
+
+if __name__ == "__main__":
+    EDA()
+
