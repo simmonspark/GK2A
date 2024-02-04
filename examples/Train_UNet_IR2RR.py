@@ -57,7 +57,8 @@ if __name__ == '__main__':
     data_loaders = [train_loader, eval_loader]
 
     model = get_model(cfg)
-    optim = optimizer(model_params=model.parameters(), learning_rate=float(cfg.fit.learning_rate), optim=cfg.fit.optimizer)
+    optim = optimizer(model_params=model.parameters(), learning_rate=float(cfg.fit.learning_rate),
+                      weight_decay=float(cfg.fit.weight_decay), optim=cfg.fit.optimizer)
     criterion = loss_fn(loss_name=cfg.fit.loss)
 
     if cfg.wandb.flag and cfg.fit.train_flag:

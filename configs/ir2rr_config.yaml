@@ -1,33 +1,34 @@
 ---
 wandb:
-  flag: True
+  flag: False
   project_name: ir2rr
   entity: munjonghyeon
 
 dataset:
   root_path: "/home/jh/data/"
-  interval_minutes: 10
+  interval_minutes: 60
   img_size: 224
   train:
     batch_size: 8
     date_from: '20230601'
-    date_to: '20230605'
+    date_to: '20230602'
     shuffle: True
 
   eval:
-    batch_size: 8
-    date_from: '20230606'
-    date_to: '20230607'
+    batch_size: 4
+    date_from: '20220601'
+    date_to: '20220602'
     shuffle: False
 
 fit:
   model: unet
   model_save_flag: False                   # True: save model, False: not save model
-  model_save_path: "./"
+  model_save_path: "/home/jh/data/models/GK2A"
 
   train_flag: True
-  learning_rate: 5e-5
-  epochs: 200
+  learning_rate: 1e-4  # 5e-5
+  weight_decay: 2e-2
+  epochs: 100
   loss: MSE
   optimizer: Adam
 

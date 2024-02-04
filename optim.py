@@ -3,9 +3,10 @@ import torch.optim as opt
 from log import log_warning
 
 
-def optimizer(model_params, learning_rate: float = 1, optim: str = "Adam"):
+def optimizer(model_params, learning_rate: float = 1, weight_decay: float = 1, optim: str = "Adam"):
     """
     call optimizer
+    :param weight_decay: weight decay
     :param model_params: learning target's parameter
     :param learning_rate: learning rate
     :param optim: optimizer
@@ -13,7 +14,7 @@ def optimizer(model_params, learning_rate: float = 1, optim: str = "Adam"):
     """
 
     if optim == "Adam":
-        return opt.Adam(model_params, learning_rate)
+        return opt.Adam(model_params, learning_rate, weight_decay=weight_decay)
     elif optim == "SGD":
         return opt.SGD(model_params, learning_rate)
     elif optim == "RMSprop":

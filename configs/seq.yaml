@@ -34,6 +34,7 @@ fit:
 
   train_flag: True
   learning_rate: 1e-5
+  weight_decay: 2e-2
   epochs: 200
   loss: MSE
   optimizer: Adam
