@@ -1,0 +1,42 @@
+---
+wandb:
+  flag: True
+  project_name: ir2rr
+  entity: sptw88
+
+dataset:
+  root_path: "/media/sien/DATA/DATA/dataset"
+  interval_minutes: 60
+  img_size: 224
+  seq_data: True
+
+  seq:
+    is_seq: True
+    sequence_len: 3
+    ir_only: True
+
+  train:
+    batch_size: 4
+    date_from: '20220602'
+    date_to: '20220605'
+    shuffle: False
+
+  eval:
+    batch_size: 4
+    date_from: '20210610'
+    date_to: '20210611'
+    shuffle: False
+
+fit:
+  model: unet
+  model_save_flag: True                   # True: save model, False: not save model
+  model_save_path: "/media/sien/DATA/weight"
+
+  train_flag: True
+  learning_rate: 1e-5
+  epochs: 200
+  loss: MSE
+  optimizer: Adam
+  img_size: 224
+  eval_flag: True
+  eval_interval: 1

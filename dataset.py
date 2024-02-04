@@ -126,7 +126,7 @@ class IR2RR_Dataset(Dataset):
 
 
 if __name__ == '__main__':
-    root_data_path = '/home/jh/data'
+    root_data_path = '/media/sien/DATA/DATA/dataset/'
     date_from = '20230601'
     date_to = '20230605'
     interval = 10

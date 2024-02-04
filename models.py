@@ -17,7 +17,10 @@ def get_model(cfg):
     """
 
     if model_name == "unet":
-        model = UNet()
+        if cfg.dataset.seq.is_seq is True:
+            model = UNet(sequence=cfg.dataset.seq.sequence_len)
+        else:
+            model = UNet(sequence=2)
     elif model_name == "smat":
         model = SMAT_unet()
     elif model_name == "transunet":

@@ -3,8 +3,10 @@ import torch.nn as nn
 
 
 class UNet(nn.Module):
-    def __init__(self):
+    def __init__(self,sequence):
         super(UNet, self).__init__()
+
+        self.sequence = sequence
 
         def CBR2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=True):
             layers = []
@@ -19,7 +21,7 @@ class UNet(nn.Module):
             return cbr
 
         # Contracting path
-        self.enc1_1 = CBR2d(in_channels=1, out_channels=64)
+        self.enc1_1 = CBR2d(in_channels=sequence-1, out_channels=64)
         self.enc1_2 = CBR2d(in_channels=64, out_channels=64)
 
         self.pool1 = nn.MaxPool2d(kernel_size=2)
@@ -119,7 +121,7 @@ class UNet(nn.Module):
 if __name__ == "__main__":
     # model = ResNetV2(block_units=(3,4,9), width_factor=1)
     dummy = torch.randn(size=(2, 1, 224, 224))
-    model = UNet()
+    model = UNet(sequence=1)
     pred = model(dummy)
     print(
     )
