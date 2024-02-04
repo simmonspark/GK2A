@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+
 def initialize_weights(*models):
     for model in models:
         for module in model.modules():
@@ -15,7 +16,7 @@ def initialize_weights(*models):
 
 
 class _EncoderBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dropout=True):
+    def __init__(self, in_channels, out_channels, drop_out_p, dropout=True):
         super(_EncoderBlock, self).__init__()
         layers = [
             nn.Conv2d(in_channels, out_channels, kernel_size=3),
@@ -26,7 +27,7 @@ class _EncoderBlock(nn.Module):
             nn.ReLU(inplace=True),
         ]
         if dropout:
-            layers.append(nn.Dropout())
+            layers.append(nn.Dropout(p=drop_out_p))
         layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
         self.encode = nn.Sequential(*layers)
 
@@ -52,12 +53,12 @@ class _DecoderBlock(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, sequence):
+    def __init__(self, drop_out, is_drop=True, sequence=1):
         super(UNet, self).__init__()
-        self.enc1 = _EncoderBlock(sequence, 64)
-        self.enc2 = _EncoderBlock(64, 128)
-        self.enc3 = _EncoderBlock(128, 256)
-        self.enc4 = _EncoderBlock(256, 512, dropout=True)
+        self.enc1 = _EncoderBlock(sequence, 64, drop_out, is_drop)
+        self.enc2 = _EncoderBlock(64, 128, drop_out, is_drop)
+        self.enc3 = _EncoderBlock(128, 256, drop_out, is_drop)
+        self.enc4 = _EncoderBlock(256, 512, drop_out, is_drop)
         self.center = _DecoderBlock(512, 1024, 512)
         self.dec4 = _DecoderBlock(1024, 512, 256)
         self.dec3 = _DecoderBlock(512, 256, 128)
