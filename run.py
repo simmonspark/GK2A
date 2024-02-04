@@ -3,13 +3,14 @@ import gc
 import torch
 import wandb
 from tqdm import tqdm
-
+from utils import mkdir_p
 
 def run(model, optimizer, criterion, cfg, dataloaders):
     best_loss = 100000000
-    save_dir = cfg.fit.model_save_path + "/" + cfg.fit.model + "/"
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+    if cfg.fit.model_save_flag:
+        save_dir = cfg.fit.model_save_path + "/" + cfg.fit.model + "/"
+        if not os.path.exists(save_dir):
+            mkdir_p(save_dir)
 
     if cfg.fit.train_flag:
         try:
