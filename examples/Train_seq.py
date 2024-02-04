@@ -9,7 +9,7 @@ from torch import cuda
 from torch.utils.data import DataLoader
 
 from config import get_config
-from sequence_dataset import Sampler_Dataset, SEQ_Sampler
+from sequence_dataset import Sequence_Dataset
 from models import get_model
 from optim import optimizer
 from loss_fn import loss_fn
@@ -40,7 +40,7 @@ cuda.max_memory_reserved('cuda')
 if __name__ == '__main__':
     cfg = get_config("../configs/seq.yaml")
 
-    train_dataset = Sampler_Dataset(
+    train_dataset = Sequence_Dataset(
         root_data_path=cfg.dataset.root_path,
         date_from=cfg.dataset.train.date_from,
         date_to=cfg.dataset.train.date_to,
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         ir_only=cfg.dataset.seq.ir_only
     )
 
-    eval_dataset = Sampler_Dataset(
+    eval_dataset = Sequence_Dataset(
         root_data_path=cfg.dataset.root_path,
         date_from=cfg.dataset.eval.date_from,
         date_to=cfg.dataset.eval.date_to,
@@ -59,12 +59,11 @@ if __name__ == '__main__':
         sequence_len=cfg.dataset.seq.sequence_len,
         ir_only=cfg.dataset.seq.ir_only
     )
-    train_sampler = SEQ_Sampler(train_dataset.sampler_idx)
-    eval_sampler = SEQ_Sampler(eval_dataset.sampler_idx)
-    train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.train.batch_size,
-                              shuffle=cfg.dataset.train.shuffle, sampler=train_sampler)
+
+    train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.train.batch_size, shuffle=cfg.dataset.train.shuffle,
+                              sampler=train_dataset.sampler)
     eval_loader = DataLoader(eval_dataset, batch_size=cfg.dataset.eval.batch_size, shuffle=cfg.dataset.eval.shuffle,
-                             sampler=eval_sampler)
+                             sampler=eval_dataset.sampler)
     data_loaders = [train_loader, eval_loader]
 
     model = get_model(cfg)
@@ -92,5 +91,3 @@ if __name__ == '__main__':
 
     if cfg.dataset.seq.is_seq is True:
         run_by_seq(model, optim, criterion, cfg, data_loaders)
-    else:
-        run(model, optim, criterion, cfg, data_loaders)

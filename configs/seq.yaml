@@ -1,11 +1,11 @@
 ---
 wandb:
   flag: True
-  project_name: ir2rr
-  entity: sptw88
+  project_name: seq
+  entity: munjonghyeon
 
 dataset:
-  root_path: "/media/sien/DATA/DATA/dataset"
+  root_path: "/home/jh/data/"
   interval_minutes: 60
   img_size: 224
   seq_data: True
@@ -29,7 +29,7 @@ dataset:
 
 fit:
   model: unet
-  model_save_flag: True                   # True: save model, False: not save model
+  model_save_flag: False                   # True: save model, False: not save model
   model_save_path: "/media/sien/DATA/weight"
 
   train_flag: True
