@@ -1,127 +1,87 @@
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
+from torch import nn
+
+def initialize_weights(*models):
+    for model in models:
+        for module in model.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                nn.init.kaiming_normal(module.weight)
+                if module.bias is not None:
+                    module.bias.data.zero_()
+            elif isinstance(module, nn.BatchNorm2d):
+                module.weight.data.fill_(1)
+                module.bias.data.zero_()
+
+
+class _EncoderBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, dropout=True):
+        super(_EncoderBlock, self).__init__()
+        layers = [
+            nn.Conv2d(in_channels, out_channels, kernel_size=3),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+        ]
+        if dropout:
+            layers.append(nn.Dropout())
+        layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+        self.encode = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.encode(x)
+
+
+class _DecoderBlock(nn.Module):
+    def __init__(self, in_channels, middle_channels, out_channels):
+        super(_DecoderBlock, self).__init__()
+        self.decode = nn.Sequential(
+            nn.Conv2d(in_channels, middle_channels, kernel_size=3),
+            nn.BatchNorm2d(middle_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(middle_channels, middle_channels, kernel_size=3),
+            nn.BatchNorm2d(middle_channels),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(middle_channels, out_channels, kernel_size=2, stride=2),
+        )
+
+    def forward(self, x):
+        return self.decode(x)
 
 
 class UNet(nn.Module):
-    def __init__(self,sequence):
+    def __init__(self, sequence):
         super(UNet, self).__init__()
-
-        self.sequence = sequence
-
-        def CBR2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=True):
-            layers = []
-            layers += [nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
-                                 kernel_size=kernel_size, stride=stride, padding=padding,
-                                 bias=bias)]
-            layers += [nn.BatchNorm2d(num_features=out_channels)]
-            layers += [nn.ReLU()]
-
-            cbr = nn.Sequential(*layers)
-
-            return cbr
-
-        # Contracting path
-        self.enc1_1 = CBR2d(in_channels=sequence-1, out_channels=64)
-        self.enc1_2 = CBR2d(in_channels=64, out_channels=64)
-
-        self.pool1 = nn.MaxPool2d(kernel_size=2)
-
-        self.enc2_1 = CBR2d(in_channels=64, out_channels=128)
-        self.enc2_2 = CBR2d(in_channels=128, out_channels=128)
-
-        self.pool2 = nn.MaxPool2d(kernel_size=2)
-
-        self.enc3_1 = CBR2d(in_channels=128, out_channels=256)
-        self.enc3_2 = CBR2d(in_channels=256, out_channels=256)
-
-        self.pool3 = nn.MaxPool2d(kernel_size=2)
-
-        self.enc4_1 = CBR2d(in_channels=256, out_channels=512)
-        self.enc4_2 = CBR2d(in_channels=512, out_channels=512)
-
-        self.pool4 = nn.MaxPool2d(kernel_size=2)
-
-        self.enc5_1 = CBR2d(in_channels=512, out_channels=1024)
-
-        # Expansive path
-        self.dec5_1 = CBR2d(in_channels=1024, out_channels=512)
-
-        self.unpool4 = nn.ConvTranspose2d(in_channels=512, out_channels=512,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-
-        self.dec4_2 = CBR2d(in_channels=2 * 512, out_channels=512)
-        self.dec4_1 = CBR2d(in_channels=512, out_channels=256)
-
-        self.unpool3 = nn.ConvTranspose2d(in_channels=256, out_channels=256,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-
-        self.dec3_2 = CBR2d(in_channels=2 * 256, out_channels=256)
-        self.dec3_1 = CBR2d(in_channels=256, out_channels=128)
-
-        self.unpool2 = nn.ConvTranspose2d(in_channels=128, out_channels=128,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-
-        self.dec2_2 = CBR2d(in_channels=2 * 128, out_channels=128)
-        self.dec2_1 = CBR2d(in_channels=128, out_channels=64)
-
-        self.unpool1 = nn.ConvTranspose2d(in_channels=64, out_channels=64,
-                                          kernel_size=2, stride=2, padding=0, bias=True)
-
-        self.dec1_2 = CBR2d(in_channels=2 * 64, out_channels=64)
-        self.dec1_1 = CBR2d(in_channels=64, out_channels=64)
-
-        self.fc = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1, padding=0, bias=True)
+        self.enc1 = _EncoderBlock(sequence-1, 64)
+        self.enc2 = _EncoderBlock(64, 128)
+        self.enc3 = _EncoderBlock(128, 256)
+        self.enc4 = _EncoderBlock(256, 512, dropout=True)
+        self.center = _DecoderBlock(512, 1024, 512)
+        self.dec4 = _DecoderBlock(1024, 512, 256)
+        self.dec3 = _DecoderBlock(512, 256, 128)
+        self.dec2 = _DecoderBlock(256, 128, 64)
+        self.dec1 = nn.Sequential(
+            nn.Conv2d(128, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+        )
+        self.final = nn.Conv2d(64, 1, kernel_size=1)
+        initialize_weights(self)
 
     def forward(self, x):
-        enc1_1 = self.enc1_1(x)
-        enc1_2 = self.enc1_2(enc1_1)
-        pool1 = self.pool1(enc1_2)
-
-        enc2_1 = self.enc2_1(pool1)
-        enc2_2 = self.enc2_2(enc2_1)
-        pool2 = self.pool2(enc2_2)
-
-        enc3_1 = self.enc3_1(pool2)
-        enc3_2 = self.enc3_2(enc3_1)
-        pool3 = self.pool3(enc3_2)
-
-        enc4_1 = self.enc4_1(pool3)
-        enc4_2 = self.enc4_2(enc4_1)
-        pool4 = self.pool4(enc4_2)
-
-        enc5_1 = self.enc5_1(pool4)
-
-        dec5_1 = self.dec5_1(enc5_1)
-
-        unpool4 = self.unpool4(dec5_1)
-        cat4 = torch.cat((unpool4, enc4_2), dim=1)
-        dec4_2 = self.dec4_2(cat4)
-        dec4_1 = self.dec4_1(dec4_2)
-
-        unpool3 = self.unpool3(dec4_1)
-        cat3 = torch.cat((unpool3, enc3_2), dim=1)
-        dec3_2 = self.dec3_2(cat3)
-        dec3_1 = self.dec3_1(dec3_2)
-
-        unpool2 = self.unpool2(dec3_1)
-        cat2 = torch.cat((unpool2, enc2_2), dim=1)
-        dec2_2 = self.dec2_2(cat2)
-        dec2_1 = self.dec2_1(dec2_2)
-
-        unpool1 = self.unpool1(dec2_1)
-        cat1 = torch.cat((unpool1, enc1_2), dim=1)
-        dec1_2 = self.dec1_2(cat1)
-        dec1_1 = self.dec1_1(dec1_2)
-
-        x = self.fc(dec1_1)
-
-        return x
-
-
-if __name__ == "__main__":
-    # model = ResNetV2(block_units=(3,4,9), width_factor=1)
-    dummy = torch.randn(size=(2, 1, 224, 224))
-    model = UNet(sequence=1)
-    pred = model(dummy)
-    print(
-    )
+        enc1 = self.enc1(x)
+        enc2 = self.enc2(enc1)
+        enc3 = self.enc3(enc2)
+        enc4 = self.enc4(enc3)
+        center = self.center(enc4)
+        dec4 = self.dec4(torch.cat([center, F.upsample(enc4, center.size()[2:], mode='bilinear')], 1))
+        dec3 = self.dec3(torch.cat([dec4, F.upsample(enc3, dec4.size()[2:], mode='bilinear')], 1))
+        dec2 = self.dec2(torch.cat([dec3, F.upsample(enc2, dec3.size()[2:], mode='bilinear')], 1))
+        dec1 = self.dec1(torch.cat([dec2, F.upsample(enc1, dec2.size()[2:], mode='bilinear')], 1))
+        final = self.final(dec1)
+        return F.upsample(final, x.size()[2:], mode='bilinear')
