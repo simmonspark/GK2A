@@ -39,9 +39,8 @@ def get_sampler_idx(total_list, missing_list, sequence_len=3):
 
 
 class Sampler_Dataset(Dataset):
-    def __init__(self, root_data_path, date_from, date_to, interval, img_size, sequence_len, ir_only=False):
-        self.ir_img_list = []
-        self.rr_img_list = []
+    def __init__(self, root_data_path, date_from, date_to, interval, img_size, sequence_len, ir_only=True):
+        self.img_list = []
         self.missing_date = []
         self.seq_len = sequence_len
         self.ir_only = ir_only
@@ -51,54 +50,47 @@ class Sampler_Dataset(Dataset):
         for date in tqdm(date_list, desc='Loading Dataset..'):
             ir_path = root_data_path + '/GK2A/IR/' + date + '.nc'
             rr_path = root_data_path + '/GK2A/RR/' + date + '.nc'
-            if os.path.isfile(ir_path) and os.path.isfile(rr_path):
-                ir_data = nc.Dataset(ir_path)
-                rr_data = nc.Dataset(rr_path)
+            if ir_only:
+                path = root_data_path + '/GK2A/IR/' + date + '.nc'
+            else:
+                path = root_data_path + '/GK2A/RR/' + date + '.nc'
 
-                ir_img = ir_data.variables['image_pixel_values'][:]
-                rr_img = rr_data.variables['RR'][:]
+            if os.path.isfile(path):
+                data = nc.Dataset(path)
 
-                self.ir_img_list.append(cv.resize(ir_img, (img_size, img_size), interpolation=cv.INTER_AREA))
-                self.rr_img_list.append(cv.resize(rr_img, (img_size, img_size), interpolation=cv.INTER_AREA))
+                if ir_only:
+                    img = data.variables['image_pixel_values'][:]
+                else:
+                    img = data.variables['RR'][:]
 
-                ir_data.close()
-                rr_data.close()
+                self.img_list.append(cv.resize(img, (img_size, img_size), interpolation=cv.INTER_AREA))
+                data.close()
 
             else:
+                self.img_list.append(np.zeros((img_size, img_size), dtype=np.float32))
                 self.missing_date.append(date)
-                self.ir_img_list.append(debug_img)
-                self.rr_img_list.append(debug_img)
 
-        self.ir_img_list = np.array(self.ir_img_list, dtype=np.float32)
-        self.rr_img_list = np.array(self.rr_img_list, dtype=np.float32)
+        self.img_list = np.array(self.img_list, dtype=np.float32)
 
-        self.ir_img_list = (self.ir_img_list - self.ir_img_list.min()) / (
-                    self.ir_img_list.max() - self.ir_img_list.min())
-        self.rr_img_list = (self.rr_img_list - self.rr_img_list.min()) / (
-                    self.rr_img_list.max() - self.rr_img_list.min())
+        self.img_list = (self.img_list - self.img_list.min()) / (self.img_list.max() - self.img_list.min())
 
         self.sampler_idx = get_sampler_idx(total_list=date_list, missing_list=self.missing_date,
                                            sequence_len=self.seq_len)
-        print(
-            f'total_data_len with missing data is {len(date_list)}, after replace 짱구 data len is {len(self.ir_img_list)}')
 
-        print(f'Dataset Size: {len(self.ir_img_list)}')
+        # print(f'total data len with missing data is {len(date_list)}, after replace 짱구 data is {len(self.img_list)}')
+
+        print(f'Dataset Size: {len(self.img_list)}')
         print(f'Number of Missing Date: {len(self.missing_date)}')
 
     def __len__(self):
-        return len(self.ir_img_list)
+        return len(self.img_list)
 
     def __getitem__(self, idx):
-        ir = self.ir_img_list[idx:idx + self.seq_len]
-        rr = self.rr_img_list[idx:idx + self.seq_len]
+        imgs = self.img_list[idx:idx + self.seq_len]
 
-        ir = torch.Tensor(ir)
-        rr = torch.Tensor(rr)
+        imgs = torch.Tensor(imgs)
 
-        if self.ir_only is True:
-            return ir
-        elif self.ir_only is False:
-            return rr
+        return imgs
 
 
 class SEQ_Sampler(Sampler):
