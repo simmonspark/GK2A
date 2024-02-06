@@ -43,13 +43,13 @@ if __name__ == '__main__':
     train_dataset = IR2RR_Dataset(root_data_path=cfg.dataset.root_path,
                                   date_from=cfg.dataset.train.date_from,
                                   date_to=cfg.dataset.train.date_to,
-                                  interval=cfg.dataset.interval_minutes,
+                                  interval=cfg.dataset.train.interval_minutes,
                                   img_size=cfg.dataset.img_size)
 
     eval_dataset = IR2RR_Dataset(root_data_path=cfg.dataset.root_path,
                                  date_from=cfg.dataset.eval.date_from,
                                  date_to=cfg.dataset.eval.date_to,
-                                 interval=cfg.dataset.interval_minutes,
+                                 interval=cfg.dataset.eval.interval_minutes,
                                  img_size=cfg.dataset.img_size)
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.train.batch_size, shuffle=cfg.dataset.train.shuffle)

@@ -44,7 +44,7 @@ if __name__ == '__main__':
         root_data_path=cfg.dataset.root_path,
         date_from=cfg.dataset.train.date_from,
         date_to=cfg.dataset.train.date_to,
-        interval=cfg.dataset.interval_minutes,
+        interval=cfg.dataset.train.interval_minutes,
         img_size=cfg.dataset.img_size,
         sequence_len=cfg.dataset.seq.sequence_len,
         ir_only=cfg.dataset.seq.ir_only
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         root_data_path=cfg.dataset.root_path,
         date_from=cfg.dataset.eval.date_from,
         date_to=cfg.dataset.eval.date_to,
-        interval=cfg.dataset.interval_minutes,
+        interval=cfg.dataset.eval.interval_minutes,
         img_size=cfg.dataset.img_size,
         sequence_len=cfg.dataset.seq.sequence_len,
         ir_only=cfg.dataset.seq.ir_only

@@ -6,7 +6,7 @@ wandb:
 
 dataset:
   root_path: "/home/jh/data/"
-  interval_minutes: 60
+  interval_minutes: 10
   img_size: 224
   seq_data: True
 
@@ -16,12 +16,14 @@ dataset:
     ir_only: True
 
   train:
+    interval_minutes: 10
     batch_size: 4
     date_from: '20220602'
     date_to: '20220605'
     shuffle: False
 
   eval:
+    interval_minutes: 10
     batch_size: 4
     date_from: '20210610'
     date_to: '20210611'
@@ -29,6 +31,8 @@ dataset:
 
 fit:
   model: unet
+  dropout_is: False
+  dropout_p: 0.2
   model_save_flag: False                   # True: save model, False: not save model
   model_save_path: "/media/sien/DATA/weight"
 

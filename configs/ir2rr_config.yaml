@@ -1,28 +1,37 @@
 ---
 wandb:
-  flag: False
+  flag: True
   project_name: ir2rr
   entity: munjonghyeon
 
 dataset:
   root_path: "/home/jh/data/"
-  interval_minutes: 60
-  img_size: 224
+  img_size: 284
+
+  seq:
+    is_seq: False
+    sequence_len: 3
+    ir_only: True
+
   train:
+    interval_minutes: 120
     batch_size: 8
-    date_from: '20230601'
-    date_to: '20230602'
+    date_from: '20200601'
+    date_to: '20220831'
     shuffle: True
 
   eval:
+    interval_minutes: 120
     batch_size: 4
-    date_from: '20220601'
-    date_to: '20220602'
+    date_from: '20230601'
+    date_to: '20230831'
     shuffle: False
 
 fit:
   model: unet
-  model_save_flag: False                   # True: save model, False: not save model
+  dropout_is: True
+  dropout_p: 0.2
+  model_save_flag: True                   # True: save model, False: not save model
   model_save_path: "/home/jh/data/models/GK2A"
 
   train_flag: True
