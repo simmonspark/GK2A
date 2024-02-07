@@ -184,7 +184,10 @@ def EDA(data_dir='/media/sien/DATA/DATA/dataset/GK2A'):
     rr_df = pd.DataFrame(rr_df)
     rr_df.to_csv('/media/sien/Samsung_T5/와따시 파일/plot/rr_df.csv')
     print()
+def show():
+    pass
+
 
 
 if __name__ == "__main__":
-    EDA()
+    print('for debug')

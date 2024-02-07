@@ -15,6 +15,9 @@ from models import get_model
 from optim import optimizer
 from loss_fn import loss_fn
 from run import run
+from test import visible_test, cal_loss_test
+import torch.nn as nn
+
 
 SEED = 0
 
@@ -43,13 +46,13 @@ if __name__ == '__main__':
     train_dataset = IR2RR_Dataset(root_data_path=cfg.dataset.root_path,
                                   date_from=cfg.dataset.train.date_from,
                                   date_to=cfg.dataset.train.date_to,
-                                  interval=cfg.dataset.train.interval_minutes,
+                                  interval=cfg.dataset.interval_minutes,
                                   img_size=cfg.dataset.img_size)
 
     eval_dataset = IR2RR_Dataset(root_data_path=cfg.dataset.root_path,
                                  date_from=cfg.dataset.eval.date_from,
                                  date_to=cfg.dataset.eval.date_to,
-                                 interval=cfg.dataset.eval.interval_minutes,
+                                 interval=cfg.dataset.interval_minutes,
                                  img_size=cfg.dataset.img_size)
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.train.batch_size, shuffle=cfg.dataset.train.shuffle)
@@ -79,5 +82,20 @@ if __name__ == '__main__':
 
         wandb.watch(model, log="all", log_freq=10)
 
-    run(model, optim, criterion, cfg, data_loaders)
+
+
+    if cfg.fit.train_flag:
+        model.train()
+        run(model, optim, criterion, cfg, data_loaders)
+    elif cfg.fit.test_mode == 'visible':
+        criterion = nn.L1Loss()
+        model.load_state_dict(torch.load(cfg.fit.state_dict_path))
+        model.eval()
+        visible_test(model,data_loaders)
+    elif cfg.fit.test_mode == 'cal_loss':
+        criterion = nn.L1Loss()
+        model.load_state_dict(torch.load(cfg.fit.state_dict_path))
+        model.eval()
+        cal_loss_test(model, criterion, cfg, data_loaders)
+
 

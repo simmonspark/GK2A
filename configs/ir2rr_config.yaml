@@ -1,40 +1,35 @@
 ---
 wandb:
-  flag: True
-  project_name: ir2rr
-  entity: munjonghyeon
+  flag: False
+  project_name: caps
+  entity: sptw88
 
 dataset:
-  root_path: "/home/jh/data/"
-  img_size: 284
-
-  seq:
-    is_seq: False
-    sequence_len: 3
-    ir_only: True
-
+  root_path: "/media/sien/DATA/DATA/dataset"
+  interval_minutes: 60
+  img_size: 224
   train:
-    interval_minutes: 120
     batch_size: 8
-    date_from: '20200601'
-    date_to: '20220831'
+    date_from: '20230601'
+    date_to: '20230602'
     shuffle: True
 
   eval:
-    interval_minutes: 120
     batch_size: 4
-    date_from: '20230601'
-    date_to: '20230831'
+    date_from: '20220601'
+    date_to: '20220602'
     shuffle: False
 
 fit:
-  model: unet
-  dropout_is: True
-  dropout_p: 0.2
-  model_save_flag: True                   # True: save model, False: not save model
-  model_save_path: "/home/jh/data/models/GK2A"
+  model: 'unet'
+  model_save_flag: False                   # True: save model, False: not save model
+  train_flag: False
+  model_save_path: "/media/sien/DATA/weight"
 
-  train_flag: True
+  test_mode: 'visible' #score-> cal_loss, visible->plot
+  state_dict_path: '/media/sien/DATA/weight/unet/BEST_unet_20210601_20220830_imgsize224.pt'
+
+
   learning_rate: 1e-4  # 5e-5
   weight_decay: 2e-2
   epochs: 100
