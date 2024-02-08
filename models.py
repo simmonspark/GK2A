@@ -6,6 +6,7 @@ from nets.vit_patch28 import VIT
 from nets.Resnet import Resnet
 from nets.ResUnet import ResUnet
 from nets.ResUnetPlus import ResUnetPlusPlus
+from nets.Unet import UNetSmall
 from log import log_warning
 
 
@@ -37,6 +38,8 @@ def get_model(cfg):
         model = ResUnetPlusPlus(1)
     elif model_name == "unetmelfunc":
         model = melfunc(drop_out=0.2)
+    elif model_name == "smallunet":
+        model = UNetSmall()
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s)" % model_name)

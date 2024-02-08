@@ -26,30 +26,24 @@ def visible_test(model, criterion, data_loader):
     print(f'END || best_loss is {best}')
 
 
-def cal_loss_test(model, criterion, cfg, data_loaders):
-    test_loss = test(model, criterion, cfg, data_loaders)
+def cal_loss_test(model, criterion, data_loaders):
+    test_loss = test(model, criterion, data_loaders)
     print(f'test_score is {test_loss}')
 
 
-def test(model, criterion, dataloaders, wandb_flag: bool = True):
-    step = "Val"
-    tepoch = tqdm(dataloaders, decs=step, total=len(dataloaders))
-    running_loss = 0.0
+def test(model, criterion, dataloader):
+
+    running_loss = []
     with torch.no_grad():
-        for inputs, target in tepoch:
+        for inputs, target in dataloader:
             outputs = model(inputs)
             loss = criterion(outputs, target)
 
             if ~torch.isfinite(loss):
                 continue
-            running_loss += loss.item()
+            running_loss.append(loss.item())
 
-            tepoch.set_postfix({'': 'loss : %.4f |' % (running_loss / tepoch.__len__())})
-
-        if wandb_flag:
-            wandb.log({step + "_loss": running_loss / tepoch.__len__()})
-
-        return running_loss / tepoch.__len__()
+        return sum(running_loss) / len(running_loss)
 
 
 def show(tensor):

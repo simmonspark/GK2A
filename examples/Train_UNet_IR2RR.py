@@ -90,10 +90,9 @@ if __name__ == '__main__':
         model.eval()
         visible_test(model, criterion, data_loaders[1])
     elif cfg.fit.test_mode == 'cal_loss':
-        criterion = nn.L1Loss()
         model.load_state_dict(torch.load(cfg.fit.state_dict_path))
         model.eval()
-        cal_loss_test(model, criterion, cfg, data_loaders[1])
+        cal_loss_test(model, criterion, data_loaders[1])
     elif cfg.fit.test_mode == 'maskedvisible':
         criterion = nn.L1Loss()
         model.load_state_dict(torch.load(cfg.fit.state_dict_path))

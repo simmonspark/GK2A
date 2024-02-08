@@ -35,7 +35,7 @@ def run(model, optimizer, criterion, cfg, dataloaders):
                 print("KeyboardInterrupt! model_saved! ")
                 torch.save(model.state_dict(), model.state_dict(), save_dir + "LAST_" + cfg.fit.model
                            + "_" + cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to
-                           + "_imgsize" + str(cfg.fit.img_size) + ".pt")
+                           + "_imgsize" + str(cfg.dataset.img_size) + ".pt")
 
 
 def train_fn(epoch, model, optimizer, criterion, dataloaders, wandb_flag: bool = True):

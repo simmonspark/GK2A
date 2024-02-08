@@ -7,28 +7,28 @@ wandb:
 dataset:
   root_path: "/media/sien/DATA/DATA/dataset"
   interval_minutes: 60
-  img_size: 224
+  img_size: 572
   train:
-    batch_size: 16
+    batch_size: 3
     date_from: '20200601'
-    date_to: '20200602'
+    date_to: '20220831'
     shuffle: True
 
   eval:
-    batch_size: 16
-    date_from: '20230801'
+    batch_size: 3
+    date_from: '20230601'
     date_to: '20230831'
-    shuffle: False
+    shuffle: True
 
 fit:
-  model: 'resunetplus'
-  model_save_flag: False                   # True: save model, False: not save model
-  train_flag: False
+  model: 'unet'
+  model_save_flag: True                   # True: save model, False: not save model
+  train_flag: True
   model_save_path: "/media/sien/DATA/weight"
 
-  test_mode: 'maskedvisible' #score-> cal_loss, visible->plot, maskedvisible-> cal mask & show
+  test_mode: 'cal_loss' #cal_loss-> score, visible->plot, maskedvisible-> cal mask & show
 
-  state_dict_path: '/media/sien/DATA/weight/resunetplus/BEST_resunetplus_20210601_20220830_imgsize224.pt'
+  state_dict_path: '/media/sien/DATA/weight/unet/BEST_unet_20200601_20230731_imgsize572.pt'
 
 
   learning_rate: 5e-5  # 5e-5

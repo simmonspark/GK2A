@@ -6,6 +6,7 @@ from .Unet_melfunc import UNet as Unet_melfunc
 from .ResUnetPlus import ResUnetPlusPlus as ResUnetPlusPlus
 from .ResUnet import ResUnet as ResUnet
 from .Unet import UNet as Unet
+from .Unet import UNetSmall as smallunet
 
 __all__ = [
     "Resnet",
@@ -15,6 +16,7 @@ __all__ = [
     "Unet_melfunc",
     "ResUnetPlusPlus",
     "ResUnet",
-    "Unet"
+    "Unet",
+    "smallunet"
 
 ]
