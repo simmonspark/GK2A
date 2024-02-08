@@ -1,4 +1,5 @@
 from nets.Unet import UNet
+from nets.Unet_melfunc import UNet as melfunc
 from nets.smaat_unet import SMAT_unet
 from nets.TransUnet import TransUnet
 from nets.vit_patch28 import VIT
@@ -34,6 +35,8 @@ def get_model(cfg):
         model = ResUnet()
     elif model_name == "resunetplus":
         model = ResUnetPlusPlus(1)
+    elif model_name == "unetmelfunc":
+        model = melfunc(drop_out=0.2)
     else:
         log_warning("pls implemented model")
         raise NotImplementedError("implement a custom model(%s)" % model_name)

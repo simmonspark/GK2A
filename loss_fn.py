@@ -32,8 +32,9 @@ class sienMSE(Module):
 
     def forward(self, pred, target):
         # pred, target is 4d tensor : batched
-        pred = torch.reshape(pred, (-1, 1, 224, 224))
-        target = torch.reshape(target, (-1, 1, 224, 224))
+        assert len(pred.shape)==4
+        pred = torch.reshape(pred, (-1, 1, pred.shape[2], pred.shape[3]))
+        target = torch.reshape(target, (-1, 1, target.shape[2], target.shape[3]))
 
         mask_expt = torch.sign(target)
         mask_background = 1 - mask_expt

@@ -15,9 +15,8 @@ from models import get_model
 from optim import optimizer
 from loss_fn import loss_fn
 from run import run
-from test import visible_test, cal_loss_test
+from test import visible_test, cal_loss_test, get_best_threshold
 import torch.nn as nn
-
 
 SEED = 0
 
@@ -82,8 +81,6 @@ if __name__ == '__main__':
 
         wandb.watch(model, log="all", log_freq=10)
 
-
-
     if cfg.fit.train_flag:
         model.train()
         run(model, optim, criterion, cfg, data_loaders)
@@ -91,11 +88,14 @@ if __name__ == '__main__':
         criterion = nn.L1Loss()
         model.load_state_dict(torch.load(cfg.fit.state_dict_path))
         model.eval()
-        visible_test(model,data_loaders)
+        visible_test(model, criterion, data_loaders[1])
     elif cfg.fit.test_mode == 'cal_loss':
         criterion = nn.L1Loss()
         model.load_state_dict(torch.load(cfg.fit.state_dict_path))
         model.eval()
-        cal_loss_test(model, criterion, cfg, data_loaders)
-
-
+        cal_loss_test(model, criterion, cfg, data_loaders[1])
+    elif cfg.fit.test_mode == 'maskedvisible':
+        criterion = nn.L1Loss()
+        model.load_state_dict(torch.load(cfg.fit.state_dict_path))
+        model.eval()
+        get_best_threshold(model, criterion, data_loaders[1])

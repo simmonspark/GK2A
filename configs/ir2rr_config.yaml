@@ -1,6 +1,6 @@
 ---
 wandb:
-  flag: False
+  flag: True
   project_name: caps
   entity: sptw88
 
@@ -9,32 +9,33 @@ dataset:
   interval_minutes: 60
   img_size: 224
   train:
-    batch_size: 8
-    date_from: '20230601'
-    date_to: '20230602'
+    batch_size: 16
+    date_from: '20200601'
+    date_to: '20200602'
     shuffle: True
 
   eval:
-    batch_size: 4
-    date_from: '20220601'
-    date_to: '20220602'
+    batch_size: 16
+    date_from: '20230801'
+    date_to: '20230831'
     shuffle: False
 
 fit:
-  model: 'unet'
+  model: 'resunetplus'
   model_save_flag: False                   # True: save model, False: not save model
   train_flag: False
   model_save_path: "/media/sien/DATA/weight"
 
-  test_mode: 'visible' #score-> cal_loss, visible->plot
-  state_dict_path: '/media/sien/DATA/weight/unet/BEST_unet_20210601_20220830_imgsize224.pt'
+  test_mode: 'maskedvisible' #score-> cal_loss, visible->plot, maskedvisible-> cal mask & show
+
+  state_dict_path: '/media/sien/DATA/weight/resunetplus/BEST_resunetplus_20210601_20220830_imgsize224.pt'
 
 
-  learning_rate: 1e-4  # 5e-5
+  learning_rate: 5e-5  # 5e-5
   weight_decay: 2e-2
   epochs: 100
   loss: MSE
   optimizer: Adam
 
   eval_flag: True
-  eval_interval: 1
+  eval_interval: 5

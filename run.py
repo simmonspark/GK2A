@@ -24,6 +24,7 @@ def run(model, optimizer, criterion, cfg, dataloaders):
                         torch.save(model.state_dict(), save_dir + "BEST_" + cfg.fit.model + "_" +
                                    cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to + "_imgsize"
                                    + str(cfg.dataset.img_size) + ".pt")
+                        print('best_model_saved!')
 
                 gc.collect()
                 torch.cuda.empty_cache()
