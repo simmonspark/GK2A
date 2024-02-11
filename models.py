@@ -10,11 +10,9 @@ from nets.Unet import UNetSmall
 from log import log_warning
 
 
-
 def get_model(cfg):
     model_name = cfg.fit.model
     img_size = cfg.dataset.img_size
-
 
     """
     :param model_name: model name

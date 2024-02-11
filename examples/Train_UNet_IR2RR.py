@@ -1,3 +1,4 @@
+import sys
 import wandb
 import random
 import datetime
@@ -9,13 +10,15 @@ from torch import cuda
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 
+# For 6F Sever Setting
+sys.path.append('/home/ssl/JH/PycharmProjects/GK2A')
+
 from config import get_config
 from dataset import IR2RR_Dataset
 from models import get_model
 from optim import optimizer
 from loss_fn import loss_fn
-from run import run
-from test import visible_test, cal_loss_test, get_best_threshold
+from run import run, visible_test, cal_loss_test, get_best_threshold
 import torch.nn as nn
 
 SEED = 0
@@ -45,13 +48,13 @@ if __name__ == '__main__':
     train_dataset = IR2RR_Dataset(root_data_path=cfg.dataset.root_path,
                                   date_from=cfg.dataset.train.date_from,
                                   date_to=cfg.dataset.train.date_to,
-                                  interval=cfg.dataset.interval_minutes,
+                                  interval=cfg.dataset.train.interval_minutes,
                                   img_size=cfg.dataset.img_size)
 
     eval_dataset = IR2RR_Dataset(root_data_path=cfg.dataset.root_path,
                                  date_from=cfg.dataset.eval.date_from,
                                  date_to=cfg.dataset.eval.date_to,
-                                 interval=cfg.dataset.interval_minutes,
+                                 interval=cfg.dataset.eval.interval_minutes,
                                  img_size=cfg.dataset.img_size)
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.train.batch_size, shuffle=cfg.dataset.train.shuffle)
@@ -82,7 +85,6 @@ if __name__ == '__main__':
         wandb.watch(model, log="all", log_freq=10)
 
     if cfg.fit.train_flag:
-        model.train()
         run(model, optim, criterion, cfg, data_loaders)
     elif cfg.fit.test_mode == 'visible':
         criterion = nn.L1Loss()

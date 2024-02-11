@@ -1,34 +1,41 @@
 ---
 wandb:
   flag: True
-  project_name: caps
-  entity: sptw88
+  project_name: ir2rr #  JH: ir2rr, SE: caps
+  entity: munjonghyeon #  JH: munjonghyeon, SE: sptw88
 
 dataset:
-  root_path: "/media/sien/DATA/DATA/dataset"
-  interval_minutes: 60
-  img_size: 572
+  root_path: "/home/ssl/JH/data/" #  server PC: /home/ssl/JH/data/, Local JH: /home/jh/data/, Local SE: /media/sien/DATA/DATA/dataset
+  img_size: 224
+
+  seq:
+    is_seq: False
+    sequence_len: 3
+    ir_only: True
+
   train:
-    batch_size: 3
+    interval_minutes: 60
+    batch_size: 16
     date_from: '20200601'
     date_to: '20220831'
     shuffle: True
 
   eval:
-    batch_size: 3
+    interval_minutes: 120
+    batch_size: 16
     date_from: '20230601'
     date_to: '20230831'
-    shuffle: True
+    shuffle: False
 
 fit:
-  model: 'unet'
+  model: unet
   model_save_flag: True                   # True: save model, False: not save model
   train_flag: True
-  model_save_path: "/media/sien/DATA/weight"
+  model_save_path: "/home/ssl/JH/models/GK2A" #  server PC: /home/ssl/JH/models/GK2A, Local JH: /home/jh/data/models/GK2A, Local SE: /media/sien/DATA/weight
 
-  test_mode: 'cal_loss' #cal_loss-> score, visible->plot, maskedvisible-> cal mask & show
+  test_mode: 'maskedvisible' #score-> cal_loss, visible->plot, maskedvisible-> cal mask & show
 
-  state_dict_path: '/media/sien/DATA/weight/unet/BEST_unet_20200601_20230731_imgsize572.pt'
+  state_dict_path: '/media/sien/DATA/weight/resunetplus/BEST_resunetplus_20210601_20220830_imgsize224.pt'
 
 
   learning_rate: 5e-5  # 5e-5
