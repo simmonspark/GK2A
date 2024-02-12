@@ -72,6 +72,8 @@ def train_fn(epoch, model, optimizer, criterion, dataloaders, wandb_flag: bool =
 def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
     step = "Val"
 
+    np_outputs = np.array([])
+    np_target = np.array([])
     with tqdm(dataloaders, desc=step, total=len(dataloaders)) as tepoch:
         model.eval()
         running_loss = 0.0
@@ -87,8 +89,18 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
 
                 tepoch.set_postfix({'': 'loss : %.4f |' % (running_loss / tepoch.__len__())})
 
+                np_outputs = np.append(np_outputs, outputs.detach().cpu().numpy().reshape(-1,))
+                np_target = np.append(np_target, target.detach().cpu().numpy().reshape(-1, ))
+
+            np_outputs = np_outputs.reshape(-1,) * 100.0
+            np_target = np_target.reshape(-1,) * 100.0
+
             if wandb_flag:
                 wandb.log({step + "_loss": running_loss / tepoch.__len__()}, step=epoch)
+                wandb.log({"MAE_loss": MAE(np_outputs, np_target)}, step=epoch)
+                wandb.log({"RMSE_loss": RMSE(np_outputs, np_target)}, step=epoch)
+                wandb.log({"Corr_loss": corr(np_outputs, np_target)}, step=epoch)
+
 
         return running_loss / tepoch.__len__()
 
@@ -193,3 +205,16 @@ def get_best_threshold(model, criterion, loader):
         show(store_target[0:4, :, :, :] * 100.0)
         show(store_pred[0:4, :, :, :] * 100.0)
         print(f'END || best_loss is {best}')
+
+
+def MAE(pred, label):
+    return np.mean(np.abs(pred - label))
+
+
+def RMSE(pred, label):
+    return np.sqrt(np.mean((pred - label) ** 2))
+
+
+def corr(pred, label):
+    return np.corrcoef(pred, label)[0, 1]
+
