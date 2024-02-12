@@ -9,7 +9,7 @@ import os
 import gc
 import cv2 as cv
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 def get_date_list(yyyymmdd_from, yyyymmdd_to, interval_minutes=10):
     from_date = dt.datetime.strptime(yyyymmdd_from, '%Y%m%d')
@@ -184,10 +184,16 @@ def EDA(data_dir='/media/sien/DATA/DATA/dataset/GK2A'):
     rr_df = pd.DataFrame(rr_df)
     rr_df.to_csv('/media/sien/Samsung_T5/와따시 파일/plot/rr_df.csv')
     print()
-def show():
-    pass
+def plot_img_std(path ='./EDA/'):
+    ir_path = os.path.join(path,'ir_df.csv')
+    rr_path = os.path.join(path,'rr_df.csv')
+    ir_df = pd.read_csv(ir_path)
+    rr_df = pd.read_csv(rr_path)
+    ir_df['std'].hist()
+    plt.show()
+
 
 
 
 if __name__ == "__main__":
-    print('for debug')
+    plot_img_std()

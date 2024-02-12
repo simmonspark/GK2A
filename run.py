@@ -6,6 +6,7 @@ from tqdm import tqdm
 from utils import mkdir_p
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
 
 def run(model, optimizer, criterion, cfg, dataloaders):
@@ -89,18 +90,23 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
 
                 tepoch.set_postfix({'': 'loss : %.4f |' % (running_loss / tepoch.__len__())})
 
-                np_outputs = np.append(np_outputs, outputs.detach().cpu().numpy().reshape(-1,))
+                np_outputs = np.append(np_outputs, outputs.detach().cpu().numpy().reshape(-1, ))
                 np_target = np.append(np_target, target.detach().cpu().numpy().reshape(-1, ))
 
-            np_outputs = np_outputs.reshape(-1,) * 100.0
-            np_target = np_target.reshape(-1,) * 100.0
+            np_outputs = np_outputs.reshape(-1, ) * 100.0
+            np_target = np_target.reshape(-1, ) * 100.0
+            # 이거 컨피그로 하고싶은데.. 데이터 겨울꺼 다 받고 컨피그 파일 수정할게염 푸쉬하면 귀찮으실까바 ㅎ
+
+            POD, FAR, CSI = get_score(get_cf(np_outputs, np_target, 0.5))
 
             if wandb_flag:
                 wandb.log({step + "_loss": running_loss / tepoch.__len__()}, step=epoch)
                 wandb.log({"MAE_loss": MAE(np_outputs, np_target)}, step=epoch)
                 wandb.log({"RMSE_loss": RMSE(np_outputs, np_target)}, step=epoch)
                 wandb.log({"Corr_loss": corr(np_outputs, np_target)}, step=epoch)
-
+                wandb.log({"POD": POD}, step=epoch)
+                wandb.log({"FAR": FAR}, step=epoch)
+                wandb.log({"CSI": CSI}, step=epoch)
 
         return running_loss / tepoch.__len__()
 
@@ -132,7 +138,6 @@ def cal_loss_test(model, criterion, data_loaders):
 
 
 def test(model, criterion, dataloader):
-
     running_loss = []
     with torch.no_grad():
         for inputs, target in dataloader:
@@ -218,3 +223,22 @@ def RMSE(pred, label):
 def corr(pred, label):
     return np.corrcoef(pred, label)[0, 1]
 
+
+def get_cf(pred, label, th):
+    pred = np.where(pred > th, 1, 0)
+    label = np.where(label > th, 1, 0)
+    cf = confusion_matrix(pred, label)
+    return cf
+
+
+def get_score(cf):
+    TN = cf[0][0]
+    FP = cf[0][1]
+    FN = cf[1][0]
+    TP = cf[1][1]
+
+    POD = TP / (TP + FN)
+    FAR = FP / (TP + FN)
+    CSI = TP / (TP + FN + FP)
+
+    return POD, FAR, CSI

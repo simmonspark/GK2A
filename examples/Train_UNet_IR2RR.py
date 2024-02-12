@@ -3,6 +3,7 @@ import wandb
 import random
 import datetime
 import numpy as np
+from run import val_fn
 
 import gc
 import torch
@@ -100,3 +101,8 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(cfg.fit.state_dict_path))
         model.eval()
         get_best_threshold(model, criterion, data_loaders[1])
+    elif cfg.fit.test_mode == 'val_fn':
+        criterion = nn.MSELoss()
+        model.load_state_dict(torch.load(cfg.fit.state_dict_path))
+        model.eval()
+        val_fn(epoch=1,model=model,criterion=criterion,dataloaders=data_loaders[1])
