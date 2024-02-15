@@ -97,7 +97,7 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
             np_target = np_target.reshape(-1, ) * 100.0
             # 이거 컨피그로 하고싶은데.. 데이터 겨울꺼 다 받고 컨피그 파일 수정할게염 푸쉬하면 귀찮으실까바 ㅎ
 
-            POD, FAR, CSI = get_score(get_cf(np_outputs, np_target, 0.5))
+            POD, FAR, CSI = get_score(get_cf(np_outputs, np_target, 1.0))
 
             if wandb_flag:
                 wandb.log({step + "_loss": running_loss / tepoch.__len__()}, step=epoch)
@@ -237,8 +237,8 @@ def get_score(cf):
     FN = cf[1][0]
     TP = cf[1][1]
 
-    POD = TP / (TP + FN)
-    FAR = FP / (TP + FN)
-    CSI = TP / (TP + FN + FP)
+    POD = TP / (TP + FP)
+    FAR = FN / (TP + FN)
+    CSI = FP / (TP + FN + FP)
 
     return POD, FAR, CSI
