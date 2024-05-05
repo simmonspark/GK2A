@@ -101,8 +101,8 @@ class IR2RR_Dataset(Dataset):
         self.ir_img_list = np.array(self.ir_img_list, dtype=np.float32)
         self.rr_img_list = np.array(self.rr_img_list, dtype=np.float32)
 
-        self.ir_img_list = self.ir_img_list / (self.ir_img_list.std())
-        # self.ir_img_list = (self.ir_img_list - self.ir_img_list.min()) / (self.ir_img_list.max() - self.ir_img_list.min())
+        # self.ir_img_list = self.ir_img_list / (self.ir_img_list.std())
+        self.ir_img_list = (self.ir_img_list - self.ir_img_list.min()) / (self.ir_img_list.max() - self.ir_img_list.min())
 
         self.rr_img_list = self.rr_img_list / 100.0
 

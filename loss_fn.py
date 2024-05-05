@@ -17,6 +17,8 @@ def loss_fn(loss_name):
         return sienMSE()
     if loss_name == "MAE":
         return sienMAE()
+    if loss_name == "origin":
+        return torch.nn.MSELoss()
 
     else:
         log_warning("use implemented loss functions")

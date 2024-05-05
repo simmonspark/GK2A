@@ -128,14 +128,14 @@ class UNet(nn.Module):
         self.conv3 = encoding_block(128, 256)
         self.maxpool3 = nn.MaxPool2d(kernel_size=2)
 
-        self.conv4 = encoding_block(256, 512)
-        self.maxpool4 = nn.MaxPool2d(kernel_size=2)
+        '''self.conv4 = encoding_block(256, 512)
+        self.maxpool4 = nn.MaxPool2d(kernel_size=2)'''
 
         # center
-        self.center = encoding_block(512, 1024)
+        self.center = encoding_block(256, 512)
 
         # decoding
-        self.decode4 = decoding_block(1024, 512)
+        '''self.decode4 = decoding_block(1024, 512)'''
         self.decode3 = decoding_block(512, 256)
         self.decode2 = decoding_block(256, 128)
         self.decode1 = decoding_block(128, 64)
@@ -155,16 +155,16 @@ class UNet(nn.Module):
         conv3 = self.conv3(maxpool2)
         maxpool3 = self.maxpool3(conv3)
 
-        conv4 = self.conv4(maxpool3)
-        maxpool4 = self.maxpool4(conv4)
+        '''conv4 = self.conv4(maxpool3)
+        maxpool4 = self.maxpool4(conv4)'''
 
         # center
-        center = self.center(maxpool4)
+        center = self.center(maxpool3)
 
         # decoding
-        decode4 = self.decode4(conv4, center)
+        '''decode4 = self.decode4(conv4, center)'''
 
-        decode3 = self.decode3(conv3, decode4)
+        decode3 = self.decode3(conv3, center)
 
         decode2 = self.decode2(conv2, decode3)
 

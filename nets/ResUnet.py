@@ -32,8 +32,7 @@ class ResUnet(nn.Module):
         self.up_residual_conv3 = ResidualConv(filters[1] + filters[0], filters[0], 1, 1)
 
         self.output_layer = nn.Sequential(
-            nn.Conv2d(filters[0], 1, 1, 1),
-            nn.Sigmoid(),
+            nn.Conv2d(filters[0], 1, 1, 1)
         )
 
     def forward(self, x):
@@ -62,3 +61,7 @@ class ResUnet(nn.Module):
         output = self.output_layer(x10)
 
         return output
+if __name__ == "__main__":
+    model = ResUnet()
+    data = torch.randn(size = (4,1,224,224))
+    print((model(data)).shape)

@@ -17,30 +17,22 @@ def run(model, optimizer, criterion, cfg, dataloaders):
             mkdir_p(save_dir)
 
     if cfg.fit.train_flag:
-        try:
-            for epoch in range(cfg.fit.epochs):
-                train_fn(epoch, model, optimizer, criterion, dataloaders[0], cfg.wandb.flag)
-                val_loss = val_fn(epoch, model, criterion, dataloaders[1], cfg.wandb.flag)
 
-                if best_loss > val_loss:
-                    best_loss = val_loss
-                    if cfg.fit.model_save_flag:
-                        torch.save(model.state_dict(), save_dir + "BEST_" + cfg.fit.model + "_" +
-                                   cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to + "_imgsize"
-                                   + str(cfg.dataset.img_size) + ".pt")
-                        print('best_model_saved!')
+        for epoch in range(cfg.fit.epochs):
+            train_fn(epoch, model, optimizer, criterion, dataloaders[0], cfg.wandb.flag)
+            val_loss = val_fn(epoch, model, criterion, dataloaders[1], cfg.wandb.flag)
 
-                gc.collect()
-                torch.cuda.empty_cache()
-                torch.cuda.memory_allocated('cuda')
+            if best_loss > val_loss:
+                best_loss = val_loss
+                if cfg.fit.model_save_flag:
+                    torch.save(model.state_dict(), save_dir + "BEST_" + cfg.fit.model + "_" +
+                               cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to + "_imgsize"
+                               + str(cfg.dataset.img_size) + ".pt")
+                    print('best_model_saved!')
 
-        except KeyboardInterrupt:
-            if cfg.fit.model_save_flag:
-                print("KeyboardInterrupt! model_saved! ")
-                torch.save(model.state_dict(), model.state_dict(), save_dir + "LAST_" + cfg.fit.model
-                           + "_" + cfg.dataset.train.date_from + "_" + cfg.dataset.train.date_to
-                           + "_imgsize" + str(cfg.dataset.img_size) + ".pt")
-
+            gc.collect()
+            torch.cuda.empty_cache()
+            torch.cuda.memory_allocated('cuda')
 
 def train_fn(epoch, model, optimizer, criterion, dataloaders, wandb_flag: bool = True):
     step = "Train"
@@ -97,7 +89,7 @@ def val_fn(epoch, model, criterion, dataloaders, wandb_flag: bool = True):
             np_target = np_target.reshape(-1, ) * 100.0
             # 이거 컨피그로 하고싶은데.. 데이터 겨울꺼 다 받고 컨피그 파일 수정할게염 푸쉬하면 귀찮으실까바 ㅎ
 
-            POD, FAR, CSI = get_score(get_cf(np_outputs, np_target, 1.0))
+            POD, FAR, CSI = get_score(get_cf(np_outputs, np_target, 0.5))
 
             if wandb_flag:
                 wandb.log({step + "_loss": running_loss / tepoch.__len__()}, step=epoch)
@@ -237,8 +229,8 @@ def get_score(cf):
     FN = cf[1][0]
     TP = cf[1][1]
 
-    POD = TP / (TP + FP)
-    FAR = FN / (TP + FN)
-    CSI = FP / (TP + FN + FP)
+    POD = TP / (TP + FN)
+    FAR = FP / (TP + FP)
+    CSI = TP / (TP + FN + FP)
 
     return POD, FAR, CSI
