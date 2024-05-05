@@ -1,12 +1,12 @@
 ---
 wandb:
   flag: True
-  project_name: ir2rr #  JH: ir2rr, SE: caps
-  entity: munjonghyeon #  JH: munjonghyeon, SE: sptw88
+  project_name: caps #  JH: ir2rr, SE: caps
+  entity: sptw88 #  JH: munjonghyeon, SE: sptw88
 
 dataset:
-  root_path: "/home/ssl/JH/data/" #  server PC: /home/ssl/JH/data/, Local JH: /home/jh/data/, Local SE: /media/sien/DATA/DATA/dataset
-  img_size: 224
+  root_path: "/media/sien/DATA/DATA/dataset/winter" #server PC: /home/ssl/JH/data/, Local JH: /home/jh/data/, Local SE: /media/sien/DATA/DATA/dataset
+  img_size: 360
 
   seq:
     is_seq: False
@@ -14,24 +14,24 @@ dataset:
     ir_only: True
 
   train:
-    interval_minutes: 60
-    batch_size: 16
-    date_from: '20200601'
-    date_to: '20220831'
-    shuffle: True
+    interval_minutes: 120
+    batch_size: 8
+    date_from: '20201201'
+    date_to: '20230301'
+    shuffle: False
 
   eval:
     interval_minutes: 120
-    batch_size: 16
-    date_from: '20230601'
-    date_to: '20230831'
+    batch_size: 8
+    date_from: '20230302'
+    date_to: '20240301'
     shuffle: False
 
 fit:
   model: unet
   model_save_flag: True                   # True: save model, False: not save model
   train_flag: True
-  model_save_path: "/home/ssl/JH/models/GK2A" #  server PC: /home/ssl/JH/models/GK2A, Local JH: /home/jh/data/models/GK2A, Local SE: /media/sien/DATA/weight
+  model_save_path: "/media/sien/DATA/weight" #  server PC: /home/ssl/JH/models/GK2A, Local JH: /home/jh/data/models/GK2A, Local SE: /media/sien/DATA/weight
 
   test_mode: 'maskedvisible' #score-> cal_loss, visible->plot, maskedvisible-> cal mask & show
 
@@ -46,3 +46,6 @@ fit:
 
   eval_flag: True
   eval_interval: 5
+
+
+
